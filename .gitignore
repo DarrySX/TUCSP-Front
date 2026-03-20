@@ -46,3 +46,6 @@ next-env.d.ts
 # misc
 *.pem
 Thumbs.db
+
+#agents
+.agents
