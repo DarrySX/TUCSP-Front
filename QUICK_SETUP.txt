@@ -1,0 +1,35 @@
+=====================================
+UCSP TUNA - CREAR SUPERUSER (RÁPIDO)
+=====================================
+
+PASO 1: Obtener SUPABASE_SERVICE_ROLE_KEY
+------------------------------------------
+1. Ve a: https://supabase.com → Tu proyecto
+2. Settings → API
+3. Copia la clave "service_role" (la larga)
+
+PASO 2: Agregar a .env.local
+------------------------------------------
+Copia estas líneas a tu archivo .env.local:
+
+NEXT_PUBLIC_SUPABASE_URL=https://rrfcfigmyfpfvahguxmk.supabase.co
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY=sb_publishable_KWu1IXa-q0iyvCrFDtlkbg_w0VkbN4P
+SUPABASE_SERVICE_ROLE_KEY=<PEGA_AQUI_LA_CLAVE_SERVICE_ROLE>
+SETUP_SECRET=dev-setup-secret
+
+PASO 3: Ejecutar Setup
+------------------------------------------
+Terminal 1:
+  npm run dev
+
+Terminal 2:
+  node scripts/setup.js
+
+LISTO! ✓
+------------------------------------------
+El superuser estará creado con:
+  Email: brandon.valencia.calderon@gmail.com
+  Contraseña: TUCSP2026.
+  Rol: super_admin
+
+Accede a http://localhost:3000/auth/login
