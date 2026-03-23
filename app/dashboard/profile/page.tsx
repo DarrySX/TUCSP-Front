@@ -74,17 +74,35 @@ export default function ProfilePage() {
 
         const { data, error: dbError } = await supabase
           .from('profiles')
-          .select(`
-            *,
-            padrino:padrino_id(full_name, mote),
-            testigo:testigo_id(full_name, mote)
-          `)
+          .select('*')
           .eq('id', user.id)
           .single();
 
         if (dbError) throw dbError;
 
-        setProfile(data);
+        // Fetch padrino and testigo separately to avoid self-referential join issues
+        let padrino: { full_name: string | null; mote: string | null } | null = null;
+        let testigo: { full_name: string | null; mote: string | null } | null = null;
+
+        if (data.padrino_id) {
+          const { data: padrinoData } = await supabase
+            .from('profiles')
+            .select('full_name, mote')
+            .eq('id', data.padrino_id)
+            .single();
+          padrino = padrinoData;
+        }
+
+        if (data.testigo_id) {
+          const { data: testigoData } = await supabase
+            .from('profiles')
+            .select('full_name, mote')
+            .eq('id', data.testigo_id)
+            .single();
+          testigo = testigoData;
+        }
+
+        setProfile({ ...data, padrino, testigo });
         setEditData({
           first_name: data.first_name || '',
           last_name: data.last_name || '',
