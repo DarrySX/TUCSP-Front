@@ -8,11 +8,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { PasswordInput } from '@/components/ui/password-input';
 import { signIn } from '@/lib/auth';
-import Link from 'next/link';
-import { useLanguage } from '@/app/providers';
 
 export function LoginForm() {
-  const { t } = useLanguage();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -24,7 +21,7 @@ export function LoginForm() {
     setError(null);
 
     if (!email || !password) {
-      setError(t.auth.login.error);
+      setError('El correo y la contraseña son requeridos');
       return;
     }
 
@@ -38,7 +35,7 @@ export function LoginForm() {
         router.push('/dashboard');
       }
     } catch (err) {
-      setError(t.auth.login.errorMatch);
+      setError('Ocurrió un error inesperado. Por favor intenta de nuevo.');
     } finally {
       setIsLoading(false);
     }
@@ -55,12 +52,12 @@ export function LoginForm() {
 
       <div className="space-y-2.5">
         <label htmlFor="email" className="text-sm font-semibold text-foreground">
-          {t.auth.login.email}
+          Correo Electrónico
         </label>
         <Input
           id="email"
           type="email"
-          placeholder={t.auth.login.placeholder}
+          placeholder="tu@ejemplo.com"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           disabled={isLoading}
@@ -70,11 +67,11 @@ export function LoginForm() {
 
       <div className="space-y-2.5">
         <label htmlFor="password" className="text-sm font-semibold text-foreground">
-          {t.auth.login.password}
+          Contraseña
         </label>
         <PasswordInput
           id="password"
-          placeholder={t.auth.login.passwordPlaceholder}
+          placeholder="••••••••"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           disabled={isLoading}
@@ -87,7 +84,7 @@ export function LoginForm() {
         className="w-full h-11 rounded-lg font-semibold text-base shadow-sm hover:shadow-md transition-all" 
         disabled={isLoading}
       >
-        {isLoading ? t.auth.login.signing : t.auth.login.submit}
+        {isLoading ? 'Iniciando sesión...' : 'Iniciar Sesión'}
       </Button>
     </form>
   );
