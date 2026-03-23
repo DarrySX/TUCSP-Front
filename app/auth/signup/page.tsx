@@ -11,7 +11,7 @@ export default function SignUpPage() {
     <div className="space-y-8">
       <div className="space-y-4 text-center">
         <div className="inline-flex items-center justify-center">
-          <div className="w-12 h-12 bg-gradient-to-br from-primary to-primary/80 rounded-lg flex items-center justify-center shadow-lg">
+          <div className="w-12 h-12 bg-linear-to-br from-primary to-primary/80 rounded-lg flex items-center justify-center shadow-lg">
             <span className="text-white font-bold text-xl">♪</span>
           </div>
         </div>
