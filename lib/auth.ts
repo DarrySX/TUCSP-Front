@@ -35,3 +35,26 @@ export async function getCurrentUser() {
   const { data } = await supabase.auth.getUser();
   return data.user;
 }
+
+export async function sendPasswordReset(email: string) {
+  // Check if the email belongs to a registered user first
+  const { data: profile, error: profileError } = await supabase
+    .from('profiles')
+    .select('id')
+    .eq('correo_electronico', email.toLowerCase().trim())
+    .maybeSingle();
+
+  if (profileError) throw profileError;
+  if (!profile) return { exists: false };
+
+  const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
+    redirectTo: `${window.location.origin}/auth/reset-password`,
+  });
+  if (error) throw error;
+  return { exists: true };
+}
+
+export async function updatePassword(newPassword: string) {
+  const { error } = await supabase.auth.updateUser({ password: newPassword });
+  return { error };
+}
