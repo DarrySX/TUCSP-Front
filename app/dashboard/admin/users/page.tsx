@@ -53,6 +53,13 @@ interface UserRow {
 
 type EditForm = Omit<UserRow, 'id' | 'created_at' | 'avatar_url'>;
 
+type CreateFormType = {
+  firstName: string; lastName: string; email: string; password: string; confirmPassword: string;
+  role: string; mote: string; carrera: string; telefono: string;
+  personaEmergencia: string; telefonoEmergencia: string; direccion: string;
+  tipoSangre: string; dni: string; fechaNacimiento: string;
+};
+
 // ── Constants ──────────────────────────────────────────────────────────────────
 
 const ROLES = [
@@ -140,7 +147,7 @@ export default function AdminUsersPage() {
 
   // Create modal
   const [showCreate, setShowCreate] = useState(false);
-  const [createForm, setCreateForm] = useState({
+  const [createForm, setCreateForm] = useState<CreateFormType>({
     firstName: '', lastName: '', email: '', password: '', confirmPassword: '',
     role: 'aspirante', mote: '', carrera: '', telefono: '',
     personaEmergencia: '', telefonoEmergencia: '', direccion: '',
@@ -783,9 +790,9 @@ function CreateField({
   label, field, form, setForm, placeholder, type = 'text', required,
 }: {
   label: string;
-  field: string;
-  form: Record<string, string>;
-  setForm: React.Dispatch<React.SetStateAction<typeof form>>;
+  field: keyof CreateFormType;
+  form: CreateFormType;
+  setForm: React.Dispatch<React.SetStateAction<CreateFormType>>;
   placeholder?: string;
   type?: string;
   required?: boolean;
@@ -795,7 +802,7 @@ function CreateField({
       <label className="text-sm font-medium">{label}</label>
       <Input
         type={type}
-        value={(form as Record<string, string>)[field] ?? ''}
+        value={form[field]}
         onChange={(e) => setForm(p => ({ ...p, [field]: e.target.value }))}
         placeholder={placeholder}
         required={required}
