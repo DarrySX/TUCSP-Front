@@ -6,7 +6,6 @@ import Image from 'next/image';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
 import {
   Dialog,
   DialogContent,
@@ -97,13 +96,13 @@ function UserAvatar({ user, size = 'md' }: { user: Pick<UserRow, 'full_name' | '
     : '?';
   if (user.avatar_url) {
     return (
-      <div className={`${dim} rounded-full overflow-hidden relative flex-shrink-0`}>
+      <div className={`${dim} rounded-full overflow-hidden relative shrink-0`}>
         <Image src={user.avatar_url} alt={user.full_name ?? ''} fill className="object-cover" unoptimized />
       </div>
     );
   }
   return (
-    <div className={`${dim} rounded-full bg-primary flex items-center justify-center text-white font-bold flex-shrink-0`}>
+    <div className={`${dim} rounded-full bg-primary flex items-center justify-center text-white font-bold shrink-0`}>
       {initials}
     </div>
   );
@@ -154,6 +153,9 @@ export default function AdminUsersPage() {
   const [deletingUser, setDeletingUser] = useState<UserRow | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
+  // Reset password (per-user loading map)
+  const [resetLoading, setResetLoading] = useState<Record<string, boolean>>({});
+
   // ── Load ────────────────────────────────────────────────────────────────────
 
   useEffect(() => {
@@ -180,7 +182,8 @@ export default function AdminUsersPage() {
     const { data, error: err } = await supabase
       .from('profiles')
       .select('*')
-      .order('numero_roa', { ascending: true, nullsFirst: false });
+      .order('numero_roa', { ascending: true, nullsFirst: false })
+      .order('last_name', { ascending: true, nullsFirst: false });
     if (!err) setUsers((data as UserRow[]) ?? []);
     setIsLoading(false);
   }
@@ -237,43 +240,79 @@ export default function AdminUsersPage() {
   }
 
   async function handleSaveEdit() {
-    if (!editingUser) return;
+    if (!editingUser || !session) return;
     setIsSaving(true);
     setError(null);
     try {
       const fullName = `${editForm.first_name} ${editForm.last_name}`.trim() || editForm.full_name;
-      const { error: err } = await supabase.from('profiles').update({
-        first_name: editForm.first_name || null,
-        last_name: editForm.last_name || null,
-        full_name: fullName || null,
-        mote: editForm.mote || null,
-        role: editForm.role,
-        correo_electronico: editForm.correo_electronico || null,
-        numero_roa: editForm.numero_roa || null,
-        carrera: editForm.carrera || null,
-        telefono: editForm.telefono || null,
-        telefono_emergencia: editForm.telefono_emergencia || null,
-        persona_emergencia: editForm.persona_emergencia || null,
-        direccion: editForm.direccion || null,
-        tipo_sangre: editForm.tipo_sangre || null,
-        dni: editForm.dni || null,
-        fecha_nacimiento: editForm.fecha_nacimiento || null,
-        fecha_bautizo: editForm.fecha_bautizo || null,
-        lugar_bautizo: editForm.lugar_bautizo || null,
-        tuna_origen: editForm.tuna_origen || null,
-      }).eq('id', editingUser.id);
+      const emailChanged = editForm.correo_electronico !== (editingUser.correo_electronico ?? '');
 
-      if (err) throw err;
+      const res = await fetch('/api/admin/update-member', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session}` },
+        body: JSON.stringify({
+          userId: editingUser.id,
+          // Only send email to auth update if it actually changed
+          email: emailChanged ? (editForm.correo_electronico || undefined) : undefined,
+          profileUpdates: {
+            first_name: editForm.first_name || null,
+            last_name: editForm.last_name || null,
+            full_name: fullName || null,
+            mote: editForm.mote || null,
+            role: editForm.role,
+            correo_electronico: editForm.correo_electronico || null,
+            numero_roa: editForm.numero_roa || null,
+            carrera: editForm.carrera || null,
+            telefono: editForm.telefono || null,
+            telefono_emergencia: editForm.telefono_emergencia || null,
+            persona_emergencia: editForm.persona_emergencia || null,
+            direccion: editForm.direccion || null,
+            tipo_sangre: editForm.tipo_sangre || null,
+            dni: editForm.dni || null,
+            fecha_nacimiento: editForm.fecha_nacimiento || null,
+            fecha_bautizo: editForm.fecha_bautizo || null,
+            lugar_bautizo: editForm.lugar_bautizo || null,
+            tuna_origen: editForm.tuna_origen || null,
+          },
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Error al guardar');
 
       setUsers(prev => prev.map(u =>
         u.id === editingUser.id ? { ...u, ...editForm, full_name: fullName } : u
       ));
       setEditingUser(null);
-      showSuccess('Usuario actualizado correctamente');
+      showSuccess(emailChanged
+        ? 'Usuario actualizado — email cambiado en Auth y perfil'
+        : 'Usuario actualizado correctamente'
+      );
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error al guardar');
     } finally {
       setIsSaving(false);
+    }
+  }
+
+  async function handleSendReset(user: UserRow) {
+    if (!session) return;
+    setResetLoading(prev => ({ ...prev, [user.id]: true }));
+    try {
+      const res = await fetch('/api/admin/send-reset', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session}` },
+        body: JSON.stringify({
+          userId: user.id,
+          redirectTo: `${window.location.origin}/auth/reset-password`,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      showSuccess(`Correo de recuperación enviado a ${user.correo_electronico ?? user.full_name}`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Error al enviar correo');
+    } finally {
+      setResetLoading(prev => ({ ...prev, [user.id]: false }));
     }
   }
 
@@ -454,12 +493,21 @@ export default function AdminUsersPage() {
                   </td>
                   <td className="px-4 py-3"><RoleBadge role={user.role} /></td>
                   <td className="px-4 py-3 text-muted-foreground">{user.numero_roa ?? '—'}</td>
-                  <td className="px-4 py-3 text-muted-foreground truncate max-w-[180px]">{user.correo_electronico ?? '—'}</td>
+                  <td className="px-4 py-3 text-muted-foreground truncate max-w-45">{user.correo_electronico ?? '—'}</td>
                   <td className="px-4 py-3 text-muted-foreground">{user.carrera ?? '—'}</td>
                   <td className="px-4 py-3">
                     <div className="flex justify-end gap-2">
                       <Button size="sm" variant="outline" onClick={() => openEdit(user)}>
                         Editar
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        disabled={!!resetLoading[user.id]}
+                        onClick={() => handleSendReset(user)}
+                        title="Enviar correo de restablecimiento de contraseña"
+                      >
+                        {resetLoading[user.id] ? '...' : '🔑 Reset'}
                       </Button>
                       {user.id !== currentUserId && (
                         <Button
@@ -508,8 +556,16 @@ export default function AdminUsersPage() {
                       {user.correo_electronico && <p>{user.correo_electronico}</p>}
                       {user.carrera && <p>{user.carrera}</p>}
                     </div>
-                    <div className="flex gap-2 mt-3">
+                    <div className="flex flex-wrap gap-2 mt-3">
                       <Button size="sm" variant="outline" onClick={() => openEdit(user)}>Editar</Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        disabled={!!resetLoading[user.id]}
+                        onClick={() => handleSendReset(user)}
+                      >
+                        {resetLoading[user.id] ? '...' : '🔑 Reset'}
+                      </Button>
                       {user.id !== currentUserId && (
                         <Button
                           size="sm"
