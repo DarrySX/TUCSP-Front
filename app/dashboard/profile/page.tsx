@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
+import Image from 'next/image';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -27,6 +28,7 @@ interface Profile {
   correo_electronico: string | null;
   tuna_origen: string | null;
   absences_count: number | null;
+  avatar_url: string | null;
   padrino: { full_name: string | null; mote: string | null } | null;
   testigo: { full_name: string | null; mote: string | null } | null;
 }
@@ -44,8 +46,10 @@ export default function ProfilePage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [editData, setEditData] = useState({
     first_name: '',
@@ -80,7 +84,6 @@ export default function ProfilePage() {
 
         if (dbError) throw dbError;
 
-        // Fetch padrino and testigo separately to avoid self-referential join issues
         let padrino: { full_name: string | null; mote: string | null } | null = null;
         let testigo: { full_name: string | null; mote: string | null } | null = null;
 
@@ -126,6 +129,52 @@ export default function ProfilePage() {
     loadProfile();
   }, []);
 
+  const handleAvatarClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !profile) return;
+
+    setIsUploadingPhoto(true);
+    setError(null);
+    try {
+      const ext = file.name.split('.').pop();
+      const path = `${profile.id}/avatar.${ext}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('avatars')
+        .upload(path, file, { upsert: true });
+
+      if (uploadError) throw uploadError;
+
+      const { data: urlData } = supabase.storage
+        .from('avatars')
+        .getPublicUrl(path);
+
+      // Add cache-busting to force image refresh
+      const avatarUrl = `${urlData.publicUrl}?t=${Date.now()}`;
+
+      const { error: updateError } = await supabase
+        .from('profiles')
+        .update({ avatar_url: urlData.publicUrl })
+        .eq('id', profile.id);
+
+      if (updateError) throw updateError;
+
+      setProfile((prev) => prev ? { ...prev, avatar_url: avatarUrl } : prev);
+      setSuccessMsg('Foto de perfil actualizada');
+      setTimeout(() => setSuccessMsg(null), 3000);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Error al subir la foto');
+    } finally {
+      setIsUploadingPhoto(false);
+      // Reset input so the same file can be re-selected
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setEditData((prev) => ({ ...prev, [name]: value }));
@@ -158,11 +207,7 @@ export default function ProfilePage() {
 
       setProfile((prev) =>
         prev
-          ? {
-              ...prev,
-              ...editData,
-              full_name: `${editData.first_name} ${editData.last_name}`.trim(),
-            }
+          ? { ...prev, ...editData, full_name: `${editData.first_name} ${editData.last_name}`.trim() }
           : prev
       );
       setIsEditing(false);
@@ -230,13 +275,54 @@ export default function ProfilePage() {
           </div>
         )}
 
-        {/* Cabecera del perfil */}
         <Card className="p-8">
           <div className="flex items-center justify-between mb-8">
             <div className="flex items-center gap-6">
-              <div className="w-20 h-20 bg-primary rounded-full flex items-center justify-center text-white text-2xl font-bold">
-                {initials}
+
+              {/* Avatar con opción de cambiar foto */}
+              <div className="relative group">
+                <button
+                  type="button"
+                  onClick={handleAvatarClick}
+                  disabled={isUploadingPhoto}
+                  className="relative w-24 h-24 rounded-full overflow-hidden focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                  title="Cambiar foto de perfil"
+                >
+                  {profile.avatar_url ? (
+                    <Image
+                      src={profile.avatar_url}
+                      alt="Foto de perfil"
+                      fill
+                      className="object-cover"
+                      unoptimized
+                    />
+                  ) : (
+                    <div className="w-full h-full bg-primary flex items-center justify-center text-white text-2xl font-bold">
+                      {initials}
+                    </div>
+                  )}
+                  {/* Overlay al hover */}
+                  <div className="absolute inset-0 bg-black/50 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                    {isUploadingPhoto ? (
+                      <span className="text-white text-xs">Subiendo...</span>
+                    ) : (
+                      <>
+                        <span className="text-white text-lg">📷</span>
+                        <span className="text-white text-xs mt-1">Cambiar</span>
+                      </>
+                    )}
+                  </div>
+                </button>
+
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp,image/gif"
+                  className="hidden"
+                  onChange={handleAvatarChange}
+                />
               </div>
+
               <div>
                 <h2 className="text-2xl font-bold">{profile.full_name || '—'}</h2>
                 {profile.mote && (
@@ -248,6 +334,7 @@ export default function ProfilePage() {
                 )}
               </div>
             </div>
+
             {!isEditing && (
               <Button onClick={() => setIsEditing(true)}>Editar Perfil</Button>
             )}
@@ -321,18 +408,13 @@ export default function ProfilePage() {
                 <Button onClick={handleSave} disabled={isSaving}>
                   {isSaving ? 'Guardando...' : 'Guardar Cambios'}
                 </Button>
-                <Button
-                  variant="outline"
-                  onClick={() => setIsEditing(false)}
-                  disabled={isSaving}
-                >
+                <Button variant="outline" onClick={() => setIsEditing(false)} disabled={isSaving}>
                   Cancelar
                 </Button>
               </div>
             </div>
           ) : (
             <div className="space-y-8">
-              {/* Información de la Tuna */}
               <div>
                 <h3 className="font-semibold text-lg mb-4 pb-2 border-b">Información de la Tuna</h3>
                 <div className="grid md:grid-cols-2 gap-x-8 gap-y-4">
@@ -348,7 +430,6 @@ export default function ProfilePage() {
                 </div>
               </div>
 
-              {/* Información Personal */}
               <div>
                 <h3 className="font-semibold text-lg mb-4 pb-2 border-b">Información Personal</h3>
                 <div className="grid md:grid-cols-2 gap-x-8 gap-y-4">
@@ -362,7 +443,6 @@ export default function ProfilePage() {
                 </div>
               </div>
 
-              {/* Contacto */}
               <div>
                 <h3 className="font-semibold text-lg mb-4 pb-2 border-b">Contacto</h3>
                 <div className="grid md:grid-cols-2 gap-x-8 gap-y-4">
@@ -371,7 +451,6 @@ export default function ProfilePage() {
                 </div>
               </div>
 
-              {/* Emergencia */}
               <div>
                 <h3 className="font-semibold text-lg mb-4 pb-2 border-b">Contacto de Emergencia</h3>
                 <div className="grid md:grid-cols-2 gap-x-8 gap-y-4">
