@@ -135,13 +135,13 @@ function Avatar({ profile, size = 'md' }: {
     : '?';
   if (profile?.avatar_url) {
     return (
-      <div className={`${dim} rounded-full overflow-hidden flex-shrink-0 relative`}>
+      <div className={`${dim} rounded-full overflow-hidden shrink-0 relative`}>
         <Image src={profile.avatar_url} alt={profile.full_name ?? ''} fill className="object-cover" unoptimized />
       </div>
     );
   }
   return (
-    <div className={`${dim} rounded-full bg-primary flex items-center justify-center text-white font-bold flex-shrink-0`}>
+    <div className={`${dim} rounded-full bg-primary flex items-center justify-center text-white font-bold shrink-0`}>
       {initials}
     </div>
   );
@@ -205,14 +205,14 @@ export default function EventDetailPage() {
 
       setUserRole(profileData?.role ?? null);
       setEvent(eventData as EventDetail);
-      setRsvps((rsvpData as RsvpEntry[]) ?? []);
-      setAttendance((attendanceData as AttendanceEntry[]) ?? []);
-      setComments((commentsData as CommentEntry[]) ?? []);
+      setRsvps((rsvpData as unknown as RsvpEntry[]) ?? []);
+      setAttendance((attendanceData as unknown as AttendanceEntry[]) ?? []);
+      setComments((commentsData as unknown as CommentEntry[]) ?? []);
       setHasRsvp(!!myRsvp);
 
       // Initialize attendance map from existing records
       const map: Record<string, boolean> = {};
-      (attendanceData as AttendanceEntry[])?.forEach((a) => { map[a.user_id] = a.attended; });
+      (attendanceData as unknown as AttendanceEntry[])?.forEach((a) => { map[a.user_id] = a.attended; });
       setAttendanceMap(map);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error al cargar');
@@ -237,7 +237,7 @@ export default function EventDetailPage() {
           .select('id, user_id, created_at, profile:user_id(full_name, mote, role, avatar_url, numero_roa)')
           .single();
         setHasRsvp(true);
-        if (data) setRsvps((prev) => [...prev, data as RsvpEntry]);
+        if (data) setRsvps((prev) => [...prev, data as unknown as RsvpEntry]);
       }
     } finally {
       setRsvpLoading(false);
@@ -255,7 +255,7 @@ export default function EventDetailPage() {
         .insert({ event_id: eventId, user_id: userId, content: newComment.trim() })
         .select('id, user_id, content, edited, created_at, updated_at, profile:user_id(full_name, mote, avatar_url)')
         .single();
-      if (data) setComments((prev) => [...prev, data as CommentEntry]);
+      if (data) setComments((prev) => [...prev, data as unknown as CommentEntry]);
       setNewComment('');
     } finally {
       setCommentLoading(false);
@@ -437,7 +437,7 @@ export default function EventDetailPage() {
                     </p>
                   </div>
                   {isCompleted && attendance.find((a) => a.user_id === r.user_id) && (
-                    <span className={`ml-auto text-xs px-2 py-0.5 rounded-full font-medium flex-shrink-0 ${
+                    <span className={`ml-auto text-xs px-2 py-0.5 rounded-full font-medium shrink-0 ${
                       attendance.find((a) => a.user_id === r.user_id)?.attended
                         ? 'bg-green-100 text-green-700'
                         : 'bg-red-100 text-red-600'
@@ -473,7 +473,7 @@ export default function EventDetailPage() {
                     {r.profile?.mote && <p className="text-xs text-muted-foreground">"{r.profile.mote}"</p>}
                   </div>
                   {attendanceMap[r.user_id] && (
-                    <span className="text-xs text-green-600 font-medium flex-shrink-0">Asistió</span>
+                    <span className="text-xs text-green-600 font-medium shrink-0">Asistió</span>
                   )}
                 </label>
               ))}
