@@ -1,17 +1,11 @@
-'use client';
-
 import React from 'react';
 import Link from 'next/link';
-import { Button } from '@/components/ui/button';
-import { useLanguage } from '@/app/providers';
 
 export default function AuthLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const { language, toggleLanguage } = useLanguage();
-
   return (
     <div className="min-h-screen flex flex-col bg-gradient-to-br from-background via-background to-secondary">
       <header className="border-b border-border/40 py-4 backdrop-blur-sm">
@@ -22,12 +16,9 @@ export default function AuthLayout({
             </div>
             <div className="flex flex-col">
               <span className="font-bold text-lg text-primary">UCSP Tuna</span>
-              <span className="text-xs text-muted-foreground">Professional Music</span>
+              <span className="text-xs text-muted-foreground">Tuna Universitaria</span>
             </div>
           </Link>
-          <Button variant="outline" size="sm" onClick={toggleLanguage} className="bg-white/50 hover:bg-white/80">
-            {language === 'en' ? 'Español' : 'English'}
-          </Button>
         </div>
       </header>
       <main className="flex-1 flex items-center justify-center py-12 px-4">
