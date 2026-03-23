@@ -69,7 +69,7 @@ export function Header() {
           )}
           {isAuthenticated && (
             <Button variant="outline" size="sm" asChild className="ml-2 bg-transparent">
-              <Link href="/admin">{t.header.admin}</Link>
+              <Link href="/dashboard">Mi Panel</Link>
             </Button>
           )}
         </div>
