@@ -8,10 +8,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { signUp } from '@/lib/auth';
 import Link from 'next/link';
-import { useLanguage } from '@/app/providers';
 
 export function SignUpForm() {
-  const { t } = useLanguage();
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -26,17 +24,17 @@ export function SignUpForm() {
     setError(null);
 
     if (!fullName || !email || !password || !confirmPassword) {
-      setError(t.auth.signup.errorRequired);
+      setError('Todos los campos son requeridos');
       return;
     }
 
     if (password !== confirmPassword) {
-      setError(t.auth.signup.errorMatch);
+      setError('Las contraseñas no coinciden');
       return;
     }
 
     if (password.length < 6) {
-      setError(t.auth.signup.errorLength);
+      setError('La contraseña debe tener al menos 6 caracteres');
       return;
     }
 
@@ -48,13 +46,12 @@ export function SignUpForm() {
         setError(signUpError.message);
       } else if (data.user) {
         setSuccess(true);
-        // Redirect to dashboard after a short delay
         setTimeout(() => {
           router.push('/dashboard');
         }, 1500);
       }
     } catch (err) {
-      setError(t.auth.signup.errorServer);
+      setError('Ocurrió un error inesperado. Por favor intenta de nuevo.');
     } finally {
       setIsLoading(false);
     }
@@ -64,8 +61,8 @@ export function SignUpForm() {
     return (
       <div className="text-center space-y-4 py-8">
         <div className="text-4xl">✓</div>
-        <h2 className="text-2xl font-bold">{t.auth.signup.success}</h2>
-        <p className="text-muted-foreground">{t.auth.signup.successMessage}</p>
+        <h2 className="text-2xl font-bold">¡Bienvenido a UCSP Tuna!</h2>
+        <p className="text-muted-foreground">Tu cuenta ha sido creada. Redirigiendo a tu dashboard...</p>
       </div>
     );
   }
@@ -80,12 +77,12 @@ export function SignUpForm() {
 
       <div className="space-y-2">
         <label htmlFor="fullName" className="text-sm font-medium">
-          {t.auth.signup.fullName}
+          Nombre Completo
         </label>
         <Input
           id="fullName"
           type="text"
-          placeholder={t.auth.signup.fullNamePlaceholder}
+          placeholder="Juan Pérez"
           value={fullName}
           onChange={(e) => setFullName(e.target.value)}
           disabled={isLoading}
@@ -94,12 +91,12 @@ export function SignUpForm() {
 
       <div className="space-y-2">
         <label htmlFor="email" className="text-sm font-medium">
-          {t.auth.signup.email}
+          Correo Electrónico
         </label>
         <Input
           id="email"
           type="email"
-          placeholder={t.auth.signup.emailPlaceholder}
+          placeholder="tu@ejemplo.com"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           disabled={isLoading}
@@ -108,12 +105,12 @@ export function SignUpForm() {
 
       <div className="space-y-2">
         <label htmlFor="password" className="text-sm font-medium">
-          {t.auth.signup.password}
+          Contraseña
         </label>
         <Input
           id="password"
           type="password"
-          placeholder={t.auth.signup.passwordPlaceholder}
+          placeholder="••••••••"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           disabled={isLoading}
@@ -122,12 +119,12 @@ export function SignUpForm() {
 
       <div className="space-y-2">
         <label htmlFor="confirmPassword" className="text-sm font-medium">
-          {t.auth.signup.confirmPassword}
+          Confirmar Contraseña
         </label>
         <Input
           id="confirmPassword"
           type="password"
-          placeholder={t.auth.signup.passwordPlaceholder}
+          placeholder="••••••••"
           value={confirmPassword}
           onChange={(e) => setConfirmPassword(e.target.value)}
           disabled={isLoading}
@@ -135,13 +132,13 @@ export function SignUpForm() {
       </div>
 
       <Button type="submit" className="w-full" disabled={isLoading}>
-        {isLoading ? t.auth.signup.creating : t.auth.signup.submit}
+        {isLoading ? 'Creando Cuenta...' : 'Crear Cuenta'}
       </Button>
 
       <p className="text-center text-sm text-muted-foreground">
-        {t.auth.signup.haveAccount}{' '}
+        ¿Ya tienes una cuenta?{' '}
         <Link href="/auth/login" className="text-primary hover:underline">
-          {t.auth.signup.signIn}
+          Inicia sesión
         </Link>
       </p>
     </form>
