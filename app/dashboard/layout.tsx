@@ -35,13 +35,13 @@ export default function DashboardLayout({
 
           <nav className="hidden md:flex items-center gap-8">
             <Link href="/dashboard" className="text-sm text-foreground hover:text-primary transition">
-              Home
+              Inicio
             </Link>
             <Link href="/dashboard/events" className="text-sm text-foreground hover:text-primary transition">
-              Events
+              Eventos
             </Link>
             <Link href="/dashboard/profile" className="text-sm text-foreground hover:text-primary transition">
-              Profile
+              Mi Perfil
             </Link>
           </nav>
 
@@ -51,7 +51,7 @@ export default function DashboardLayout({
             variant="outline"
             size="sm"
           >
-            {isLoading ? 'Signing out...' : 'Sign Out'}
+            {isLoading ? 'Cerrando sesión...' : 'Cerrar Sesión'}
           </Button>
         </div>
       </header>
