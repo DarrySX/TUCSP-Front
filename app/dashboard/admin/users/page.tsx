@@ -162,6 +162,9 @@ export default function AdminUsersPage() {
   // Reset password (per-user loading map)
   const [resetLoading, setResetLoading] = useState<Record<string, boolean>>({});
 
+  // Verify email (per-user loading map)
+  const [verifyLoading, setVerifyLoading] = useState<Record<string, boolean>>({});
+
   // Temp password dialog
   const [tempPassResult, setTempPassResult] = useState<{
     name: string;
@@ -411,9 +414,29 @@ export default function AdminUsersPage() {
     }
   }
 
+  async function handleVerifyEmail(user: UserRow) {
+    setVerifyLoading(prev => ({ ...prev, [user.id]: true }));
+    try {
+      const token = await getToken();
+      if (!token) { setError('Sesión expirada. Recarga la página.'); return; }
+      const res = await fetch('/api/admin/verify-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ userId: user.id }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      showSuccess(`Email verificado para ${user.full_name ?? user.correo_electronico}`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Error al verificar email');
+    } finally {
+      setVerifyLoading(prev => ({ ...prev, [user.id]: false }));
+    }
+  }
+
   function showSuccess(msg: string) {
     setSuccessMsg(msg);
-    setTimeout(() => setSuccessMsg(null), 3000);
+    setTimeout(() => setSuccessMsg(null), 4000);
   }
 
   // ── Render ───────────────────────────────────────────────────────────────────
@@ -423,7 +446,7 @@ export default function AdminUsersPage() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
+    <div className="w-full px-4 md:px-8 py-8">
       <div className="space-y-6">
 
         {/* Header */}
@@ -497,13 +520,13 @@ export default function AdminUsersPage() {
         </div>
 
         {/* Desktop table */}
-        <div className="hidden md:block rounded-lg border overflow-hidden">
-          <table className="w-full text-sm">
+        <div className="hidden md:block rounded-lg border overflow-x-auto">
+          <table className="w-full text-sm min-w-200">
             <thead className="bg-muted/50 border-b">
               <tr>
                 <th className="text-left px-4 py-3 font-semibold">Usuario</th>
                 <th className="text-left px-4 py-3 font-semibold">Rol</th>
-                <th className="text-left px-4 py-3 font-semibold">ROA</th>
+                <th className="text-left px-4 py-3 font-semibold w-16">ROA</th>
                 <th className="text-left px-4 py-3 font-semibold">Email</th>
                 <th className="text-left px-4 py-3 font-semibold">Carrera</th>
                 <th className="text-right px-4 py-3 font-semibold">Acciones</th>
@@ -522,11 +545,11 @@ export default function AdminUsersPage() {
                     </div>
                   </td>
                   <td className="px-4 py-3"><RoleBadge role={user.role} /></td>
-                  <td className="px-4 py-3 text-muted-foreground">{user.numero_roa ?? '—'}</td>
-                  <td className="px-4 py-3 text-muted-foreground truncate max-w-45">{user.correo_electronico ?? '—'}</td>
+                  <td className="px-4 py-3 text-muted-foreground text-center">{user.numero_roa ?? '—'}</td>
+                  <td className="px-4 py-3 text-muted-foreground max-w-50 truncate">{user.correo_electronico ?? '—'}</td>
                   <td className="px-4 py-3 text-muted-foreground">{user.carrera ?? '—'}</td>
                   <td className="px-4 py-3">
-                    <div className="flex justify-end gap-2">
+                    <div className="flex justify-end flex-wrap gap-1.5">
                       <Button size="sm" variant="outline" onClick={() => openEdit(user)}>
                         Editar
                       </Button>
@@ -535,9 +558,19 @@ export default function AdminUsersPage() {
                         variant="outline"
                         disabled={!!resetLoading[user.id]}
                         onClick={() => handleSendReset(user)}
-                        title="Enviar correo de restablecimiento de contraseña"
+                        title="Enviar correo de restablecimiento"
                       >
                         {resetLoading[user.id] ? '...' : '🔑 Reset'}
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="text-green-700 border-green-300 hover:bg-green-50"
+                        disabled={!!verifyLoading[user.id]}
+                        onClick={() => handleVerifyEmail(user)}
+                        title="Confirmar email en Supabase"
+                      >
+                        {verifyLoading[user.id] ? '...' : '✓ Verificar'}
                       </Button>
                       {user.id !== currentUserId && (
                         <Button
@@ -596,6 +629,15 @@ export default function AdminUsersPage() {
                       >
                         {resetLoading[user.id] ? '...' : '🔑 Reset'}
                       </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="text-green-700 border-green-300 hover:bg-green-50"
+                        disabled={!!verifyLoading[user.id]}
+                        onClick={() => handleVerifyEmail(user)}
+                      >
+                        {verifyLoading[user.id] ? '...' : '✓ Verificar'}
+                      </Button>
                       {user.id !== currentUserId && (
                         <Button
                           size="sm"
@@ -617,7 +659,7 @@ export default function AdminUsersPage() {
 
       {/* ── Edit Modal ──────────────────────────────────────────────────────── */}
       <Dialog open={!!editingUser} onOpenChange={(open) => !open && setEditingUser(null)}>
-        <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="w-[95vw] max-w-2xl max-h-[90vh] overflow-y-auto rounded-xl p-4 sm:p-6">
           <DialogHeader>
             <DialogTitle>
               Editar Usuario — {editingUser?.full_name ?? editingUser?.correo_electronico}
@@ -712,7 +754,7 @@ export default function AdminUsersPage() {
 
       {/* ── Create Modal ─────────────────────────────────────────────────────── */}
       <Dialog open={showCreate} onOpenChange={setShowCreate}>
-        <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="w-[95vw] max-w-2xl max-h-[90vh] overflow-y-auto rounded-xl p-4 sm:p-6">
           <DialogHeader>
             <DialogTitle>Crear Nuevo Usuario</DialogTitle>
           </DialogHeader>
