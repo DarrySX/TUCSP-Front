@@ -130,7 +130,6 @@ export default function AdminUsersPage() {
   const [users, setUsers] = useState<UserRow[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
-  const [session, setSession] = useState<string | null>(null);
 
   // Filters
   const [search, setSearch] = useState('');
@@ -174,11 +173,6 @@ export default function AdminUsersPage() {
       if (profile?.role !== 'super_admin') { router.push('/dashboard'); return; }
 
       setCurrentUserId(user.id);
-
-      // Get session token for API calls
-      const { data: { session: s } } = await supabase.auth.getSession();
-      setSession(s?.access_token ?? null);
-
       await loadUsers();
     }
     init();
@@ -215,6 +209,13 @@ export default function AdminUsersPage() {
     return acc;
   }, {});
 
+  // ── Auth token ───────────────────────────────────────────────────────────────
+
+  async function getToken(): Promise<string | null> {
+    const { data: { session } } = await supabase.auth.getSession();
+    return session?.access_token ?? null;
+  }
+
   // ── Edit ────────────────────────────────────────────────────────────────────
 
   function openEdit(user: UserRow) {
@@ -247,16 +248,19 @@ export default function AdminUsersPage() {
   }
 
   async function handleSaveEdit() {
-    if (!editingUser || !session) return;
+    if (!editingUser) return;
     setIsSaving(true);
     setError(null);
     try {
+      const token = await getToken();
+      if (!token) { setError('Sesión expirada. Recarga la página.'); return; }
+
       const fullName = `${editForm.first_name} ${editForm.last_name}`.trim() || editForm.full_name;
       const emailChanged = editForm.correo_electronico !== (editingUser.correo_electronico ?? '');
 
       const res = await fetch('/api/admin/update-member', {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session}` },
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         body: JSON.stringify({
           userId: editingUser.id,
           // Only send email to auth update if it actually changed
@@ -302,12 +306,13 @@ export default function AdminUsersPage() {
   }
 
   async function handleSendReset(user: UserRow) {
-    if (!session) return;
     setResetLoading(prev => ({ ...prev, [user.id]: true }));
     try {
+      const token = await getToken();
+      if (!token) { setError('Sesión expirada. Recarga la página.'); return; }
       const res = await fetch('/api/admin/send-reset', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session}` },
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         body: JSON.stringify({
           userId: user.id,
           redirectTo: `${window.location.origin}/auth/reset-password`,
@@ -364,14 +369,16 @@ export default function AdminUsersPage() {
   // ── Delete ───────────────────────────────────────────────────────────────────
 
   async function handleDelete() {
-    if (!deletingUser || !session) return;
+    if (!deletingUser) return;
     setIsDeleting(true);
     try {
+      const token = await getToken();
+      if (!token) { setError('Sesión expirada. Recarga la página.'); return; }
       const res = await fetch('/api/admin/delete-member', {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session}`,
+          'Authorization': `Bearer ${token}`,
         },
         body: JSON.stringify({ userId: deletingUser.id }),
       });
