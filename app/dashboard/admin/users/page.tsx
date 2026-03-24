@@ -320,7 +320,14 @@ export default function AdminUsersPage() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
-      showSuccess(`Correo de recuperación enviado a ${user.correo_electronico ?? user.full_name}`);
+
+      if (data.recoveryLink) {
+        // No real email — copy link to clipboard and show it
+        try { await navigator.clipboard.writeText(data.recoveryLink); } catch {}
+        showSuccess(`Link copiado al portapapeles — compártelo con ${user.full_name ?? user.correo_electronico}`);
+      } else {
+        showSuccess(data.message ?? `Correo enviado a ${user.correo_electronico}`);
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error al enviar correo');
     } finally {
