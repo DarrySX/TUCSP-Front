@@ -106,8 +106,9 @@ export function LoginForm() {
           <div className="space-y-2">
             <h2 className="text-xl font-bold">Revisa tu correo</h2>
             <p className="text-sm text-muted-foreground leading-relaxed">
-              Enviamos un enlace de recuperación a<br />
-              <span className="font-medium text-foreground">{resetEmail}</span>
+              Si existe una cuenta registrada con<br />
+              <span className="font-medium text-foreground">{resetEmail}</span><br />
+              recibirás un enlace de recuperación en breve.
             </p>
             <p className="text-xs text-muted-foreground mt-2">
               Si no lo ves, revisa tu carpeta de spam.

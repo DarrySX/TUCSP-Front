@@ -52,16 +52,6 @@ export async function getCurrentUser() {
 }
 
 export async function sendPasswordReset(email: string) {
-  // Check if the email belongs to a registered user first
-  const { data: profile, error: profileError } = await supabase
-    .from('profiles')
-    .select('id')
-    .eq('correo_electronico', email.toLowerCase().trim())
-    .maybeSingle();
-
-  if (profileError) throw profileError;
-  if (!profile) return { exists: false };
-
   const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
     redirectTo: `${window.location.origin}/auth/reset-password`,
   });
