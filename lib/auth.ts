@@ -52,8 +52,9 @@ export async function getCurrentUser() {
 }
 
 export async function sendPasswordReset(email: string) {
+  const base = process.env.NEXT_PUBLIC_SITE_URL ?? window.location.origin;
   const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
-    redirectTo: `${window.location.origin}/auth/reset-password`,
+    redirectTo: `${base}/auth/reset-password`,
   });
   if (error) throw error;
   return { exists: true };
