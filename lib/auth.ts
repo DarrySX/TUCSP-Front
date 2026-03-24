@@ -1,9 +1,24 @@
-import { createClient } from '@supabase/supabase-js';
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+let _instance: SupabaseClient | undefined;
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+function getInstance(): SupabaseClient {
+  if (!_instance) {
+    _instance = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    );
+  }
+  return _instance;
+}
+
+export const supabase = new Proxy({} as SupabaseClient, {
+  get(_target, prop) {
+    const instance = getInstance();
+    const value = instance[prop as keyof SupabaseClient];
+    return typeof value === 'function' ? (value as Function).bind(instance) : value;
+  },
+});
 
 export async function signUp(email: string, password: string, fullName: string) {
   const { data, error } = await supabase.auth.signUp({
