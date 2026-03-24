@@ -1,11 +1,7 @@
-import { createClient } from '@supabase/supabase-js';
-
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+import { getSupabaseAdmin } from '@/lib/supabase-admin';
 
 export async function PUT(request: Request) {
+  const supabaseAdmin = getSupabaseAdmin();
   try {
     // Verify caller is authenticated and is super_admin
     const token = request.headers.get('Authorization')?.replace('Bearer ', '');
