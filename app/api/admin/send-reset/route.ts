@@ -21,15 +21,16 @@ export async function POST(request: Request) {
     if (!userId) return Response.json({ error: 'userId requerido' }, { status: 400 });
 
     const supabaseAdmin = getSupabaseAdmin();
-    const redirectUrl = redirectTo ?? `${process.env.NEXT_PUBLIC_SITE_URL}/auth/reset-password`;
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://tunaucsp.vercel.app';
+    const redirectUrl = redirectTo ?? `${siteUrl}/auth/reset-password`;
 
-    // 3. Get target's auth email
+    // 3. Get target's current auth email
     const { data: authEmail, error: authEmailErr } = await supabaseAdmin
       .rpc('get_user_auth_email', { user_id: userId });
     if (authEmailErr) throw authEmailErr;
     if (!authEmail) return Response.json({ error: 'Usuario no encontrado' }, { status: 404 });
 
-    // 4. Get target profile
+    // 4. Get target profile for display name
     const { data: targetProfile, error: targetErr } = await callerClient
       .from('profiles').select('correo_electronico, first_name, last_name').eq('id', userId).single();
     if (targetErr || !targetProfile) {
@@ -38,23 +39,19 @@ export async function POST(request: Request) {
 
     const name = [targetProfile.first_name, targetProfile.last_name].filter(Boolean).join(' ') || authEmail;
 
-    // 5a. User has real synced email → send reset email normally
-    if (
-      targetProfile.correo_electronico &&
-      targetProfile.correo_electronico === authEmail
-    ) {
+    // 5. Send reset email — auth email is always real now (no more @tucsp.internal)
+    if (!authEmail.endsWith('@tucsp.internal')) {
       const { error: resetErr } = await getSupabaseAnon().auth.resetPasswordForEmail(
-        targetProfile.correo_electronico,
+        authEmail,
         { redirectTo: redirectUrl }
       );
       if (resetErr) throw resetErr;
       return Response.json({
-        message: `Correo de recuperación enviado a ${targetProfile.correo_electronico}`,
+        message: `Correo de recuperación enviado a ${authEmail}`,
       });
     }
 
-    // 5b. No real email → set a temporary password directly in the database.
-    // This bypasses all email/API issues and is guaranteed to work for every user.
+    // Fallback (shouldn't happen after migration): set temp password
     const { data: tempPassword, error: tempErr } = await supabaseAdmin
       .rpc('admin_set_temp_password', { p_user_id: userId });
     if (tempErr) throw tempErr;
