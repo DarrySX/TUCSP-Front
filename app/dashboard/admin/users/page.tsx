@@ -162,6 +162,13 @@ export default function AdminUsersPage() {
   // Reset password (per-user loading map)
   const [resetLoading, setResetLoading] = useState<Record<string, boolean>>({});
 
+  // Temp password dialog
+  const [tempPassResult, setTempPassResult] = useState<{
+    name: string;
+    tempPassword: string;
+    loginEmail: string;
+  } | null>(null);
+
   // ── Load ────────────────────────────────────────────────────────────────────
 
   useEffect(() => {
@@ -321,10 +328,12 @@ export default function AdminUsersPage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
 
-      if (data.recoveryLink) {
-        // No real email — copy link to clipboard and show it
-        try { await navigator.clipboard.writeText(data.recoveryLink); } catch {}
-        showSuccess(`Link copiado al portapapeles — compártelo con ${user.full_name ?? user.correo_electronico}`);
+      if (data.tempPassword) {
+        setTempPassResult({
+          name: user.full_name ?? user.correo_electronico ?? user.id,
+          tempPassword: data.tempPassword,
+          loginEmail: data.loginEmail,
+        });
       } else {
         showSuccess(data.message ?? `Correo enviado a ${user.correo_electronico}`);
       }
@@ -755,6 +764,52 @@ export default function AdminUsersPage() {
               </Button>
             </DialogFooter>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Temp Password Dialog ─────────────────────────────────────────────── */}
+      <Dialog open={!!tempPassResult} onOpenChange={(open) => !open && setTempPassResult(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Contraseña temporal generada</DialogTitle>
+          </DialogHeader>
+          {tempPassResult && (
+            <div className="space-y-4">
+              <p className="text-sm text-muted-foreground">
+                <strong>{tempPassResult.name}</strong> no tiene correo real configurado.
+                Comparte estos datos directamente con el miembro (WhatsApp, en persona, etc.).
+              </p>
+              <div className="rounded-lg border bg-muted/40 p-4 space-y-3">
+                <div>
+                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Email de acceso</p>
+                  <p className="font-mono text-sm break-all">{tempPassResult.loginEmail}</p>
+                </div>
+                <div>
+                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Contraseña temporal</p>
+                  <p className="font-mono text-2xl font-bold tracking-widest">{tempPassResult.tempPassword}</p>
+                </div>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                El miembro puede iniciar sesión con estas credenciales y luego cambiar su contraseña desde su perfil.
+                Una vez compartida, esta contraseña no se puede volver a ver.
+              </p>
+            </div>
+          )}
+          <DialogFooter className="gap-2">
+            <Button
+              variant="outline"
+              onClick={() => {
+                if (!tempPassResult) return;
+                navigator.clipboard.writeText(
+                  `Email: ${tempPassResult.loginEmail}\nContraseña temporal: ${tempPassResult.tempPassword}`
+                ).catch(() => {});
+                showSuccess('Copiado al portapapeles');
+              }}
+            >
+              Copiar
+            </Button>
+            <Button onClick={() => setTempPassResult(null)}>Cerrar</Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 

@@ -29,14 +29,16 @@ export async function POST(request: Request) {
     if (authEmailErr) throw authEmailErr;
     if (!authEmail) return Response.json({ error: 'Usuario no encontrado' }, { status: 404 });
 
-    // 4. Get target profile email
+    // 4. Get target profile
     const { data: targetProfile, error: targetErr } = await callerClient
       .from('profiles').select('correo_electronico, first_name, last_name').eq('id', userId).single();
     if (targetErr || !targetProfile) {
       return Response.json({ error: 'Usuario no encontrado' }, { status: 404 });
     }
 
-    // 5a. User has a real synced email → send reset email normally
+    const name = [targetProfile.first_name, targetProfile.last_name].filter(Boolean).join(' ') || authEmail;
+
+    // 5a. User has real synced email → send reset email normally
     if (
       targetProfile.correo_electronico &&
       targetProfile.correo_electronico === authEmail
@@ -51,20 +53,17 @@ export async function POST(request: Request) {
       });
     }
 
-    // 5b. No real email yet → generate recovery link directly (admin bypasses email)
-    // Admin shares this link manually with the member (WhatsApp, in person, etc.)
-    const { data: linkData, error: linkErr } = await supabaseAdmin.auth.admin.generateLink({
-      type: 'recovery',
-      email: authEmail,
-      options: { redirectTo: redirectUrl },
-    });
-    if (linkErr) throw linkErr;
+    // 5b. No real email → set a temporary password directly in the database.
+    // This bypasses all email/API issues and is guaranteed to work for every user.
+    const { data: tempPassword, error: tempErr } = await supabaseAdmin
+      .rpc('admin_set_temp_password', { p_user_id: userId });
+    if (tempErr) throw tempErr;
 
-    const name = [targetProfile.first_name, targetProfile.last_name].filter(Boolean).join(' ') || authEmail;
     return Response.json({
-      message: `Link de recuperación generado para ${name}`,
-      recoveryLink: linkData.properties?.action_link,
-      warning: 'Este usuario no tiene correo real configurado. Comparte el link directamente con el miembro.',
+      message: `Contraseña temporal generada para ${name}`,
+      tempPassword,
+      loginEmail: authEmail,
+      warning: 'Este usuario no tiene correo real. Comparte la contraseña temporal directamente.',
     });
   } catch (error) {
     return Response.json(
