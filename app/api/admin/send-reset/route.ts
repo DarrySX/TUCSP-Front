@@ -60,9 +60,10 @@ export async function POST(request: Request) {
       recipientEmail: personalEmail ?? undefined,
     });
   } catch (error) {
-    return Response.json(
-      { error: error instanceof Error ? error.message : 'Error interno' },
-      { status: 500 }
-    );
+    const msg =
+      error instanceof Error
+        ? error.message
+        : (error as Record<string, unknown>)?.message?.toString() ?? JSON.stringify(error);
+    return Response.json({ error: msg }, { status: 500 });
   }
 }
