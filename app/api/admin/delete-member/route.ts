@@ -1,4 +1,4 @@
-import { getSupabaseAdmin, getSupabaseAnon } from '@/lib/supabase-admin';
+import { getSupabaseAdmin, getSupabaseAnon, getSupabaseWithToken } from '@/lib/supabase-admin';
 
 export async function DELETE(request: Request) {
   const supabaseAdmin = getSupabaseAdmin();
@@ -10,10 +10,10 @@ export async function DELETE(request: Request) {
     const { data: { user: caller }, error: authErr } = await getSupabaseAnon().auth.getUser(token);
     if (authErr || !caller) return Response.json({ error: 'No autorizado' }, { status: 401 });
 
-    // Verify caller is super_admin
-    const { data: callerProfile } = await supabaseAdmin
+    // Read caller's own profile using their JWT (RLS policy: auth.uid() = id)
+    const { data: callerProfile, error: profileErr } = await getSupabaseWithToken(token)
       .from('profiles').select('role').eq('id', caller.id).single();
-    if (callerProfile?.role !== 'super_admin') {
+    if (profileErr || callerProfile?.role !== 'super_admin') {
       return Response.json({ error: 'Acceso denegado' }, { status: 403 });
     }
 

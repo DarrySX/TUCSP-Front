@@ -6,12 +6,26 @@ export function getSupabaseAdmin() {
   return createClient(url, key);
 }
 
-// Use anon key to verify user JWTs — the service-role client sends
-// apikey: serviceRoleKey alongside the user JWT, which Supabase Auth rejects.
+// Verify user JWTs with the anon key — service-role key sends apikey:serviceRoleKey
+// alongside the user JWT which Supabase Auth rejects with 401.
 export function getSupabaseAnon() {
   return createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     { auth: { persistSession: false, autoRefreshToken: false } }
+  );
+}
+
+// Query the database as a specific authenticated user (respects RLS).
+// Use this to read the caller's own profile — avoids depending on service role key
+// for the role check, which would silently return null if the key is misconfigured.
+export function getSupabaseWithToken(token: string) {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      global: { headers: { Authorization: `Bearer ${token}` } },
+      auth: { persistSession: false, autoRefreshToken: false },
+    }
   );
 }
