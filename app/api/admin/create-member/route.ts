@@ -1,16 +1,7 @@
-import { createClient } from '@supabase/supabase-js';
-import { hash } from 'bcryptjs';
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-if (!supabaseUrl || !supabaseServiceKey) {
-  throw new Error('Missing Supabase environment variables');
-}
-
-const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
+import { getSupabaseAdmin } from '@/lib/supabase-admin';
 
 export async function POST(request: Request) {
+  const supabaseAdmin = getSupabaseAdmin();
   try {
     const {
       firstName,
