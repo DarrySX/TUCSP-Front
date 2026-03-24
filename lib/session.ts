@@ -1,9 +1,24 @@
-import { createClient } from '@supabase/supabase-js';
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+let _instance: SupabaseClient | undefined;
 
-export const supabase = createClient(supabaseUrl, supabaseKey);
+function getInstance(): SupabaseClient {
+  if (!_instance) {
+    _instance = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    );
+  }
+  return _instance;
+}
+
+export const supabase = new Proxy({} as SupabaseClient, {
+  get(_target, prop) {
+    const instance = getInstance();
+    const value = instance[prop as keyof SupabaseClient];
+    return typeof value === 'function' ? (value as Function).bind(instance) : value;
+  },
+});
 
 export async function getSession() {
   try {
