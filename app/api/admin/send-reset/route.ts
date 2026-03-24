@@ -1,4 +1,4 @@
-import { getSupabaseAnon, getSupabaseWithToken } from '@/lib/supabase-admin';
+import { getSupabaseAdmin, getSupabaseAnon, getSupabaseWithToken } from '@/lib/supabase-admin';
 
 export async function POST(request: Request) {
   try {
@@ -20,8 +20,7 @@ export async function POST(request: Request) {
     const { userId, redirectTo } = await request.json();
     if (!userId) return Response.json({ error: 'userId requerido' }, { status: 400 });
 
-    // 3. Get the target user's real email from profiles
-    // super_admin can read all profiles (RLS policy: "Super admin can view all profiles")
+    // 3. Get real email from profiles (super_admin can read all profiles via RLS)
     const { data: targetProfile, error: targetErr } = await callerClient
       .from('profiles')
       .select('correo_electronico, first_name, last_name')
@@ -39,7 +38,23 @@ export async function POST(request: Request) {
       );
     }
 
-    // 4. Send reset email using anon key (no service role key needed for this call)
+    // 4. Verify auth.users.email matches correo_electronico.
+    // resetPasswordForEmail looks up by auth.users.email — if they don't match it
+    // silently does nothing (Supabase never reveals whether an email exists).
+    const supabaseAdmin = getSupabaseAdmin();
+    const { data: authEmail, error: authEmailErr } = await supabaseAdmin
+      .rpc('get_user_auth_email', { user_id: userId });
+
+    if (authEmailErr) throw authEmailErr;
+
+    if (authEmail !== targetProfile.correo_electronico) {
+      return Response.json(
+        { error: 'El correo del perfil no coincide con el de autenticación. Guarda el correo del usuario primero.' },
+        { status: 400 }
+      );
+    }
+
+    // 5. Send reset email
     const { error: resetErr } = await getSupabaseAnon().auth.resetPasswordForEmail(
       targetProfile.correo_electronico,
       { redirectTo: redirectTo ?? `${process.env.NEXT_PUBLIC_SITE_URL}/auth/reset-password` }
