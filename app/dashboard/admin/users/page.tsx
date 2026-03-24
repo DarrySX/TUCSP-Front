@@ -165,11 +165,14 @@ export default function AdminUsersPage() {
   // Verify email (per-user loading map)
   const [verifyLoading, setVerifyLoading] = useState<Record<string, boolean>>({});
 
-  // Temp password dialog
-  const [tempPassResult, setTempPassResult] = useState<{
+  // Reset result dialog (temp password or recovery link)
+  const [resetResult, setResetResult] = useState<{
     name: string;
-    tempPassword: string;
     loginEmail: string;
+    tempPassword?: string;
+    recoveryLink?: string;
+    emailSent?: boolean;
+    recipientEmail?: string;
   } | null>(null);
 
   // ── Load ────────────────────────────────────────────────────────────────────
@@ -323,19 +326,19 @@ export default function AdminUsersPage() {
       const res = await fetch('/api/admin/send-reset', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-        body: JSON.stringify({
-          userId: user.id,
-          redirectTo: `${window.location.origin}/auth/reset-password`,
-        }),
+        body: JSON.stringify({ userId: user.id }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
 
-      if (data.tempPassword) {
-        setTempPassResult({
+      if (data.tempPassword || data.recoveryLink) {
+        setResetResult({
           name: user.full_name ?? user.correo_electronico ?? user.id,
+          loginEmail: data.loginEmail ?? data.recipientEmail ?? user.correo_electronico ?? '',
           tempPassword: data.tempPassword,
-          loginEmail: data.loginEmail,
+          recoveryLink: data.recoveryLink,
+          emailSent: data.emailSent,
+          recipientEmail: data.recipientEmail,
         });
       } else {
         showSuccess(data.message ?? `Correo enviado a ${user.correo_electronico}`);
@@ -809,48 +812,77 @@ export default function AdminUsersPage() {
         </DialogContent>
       </Dialog>
 
-      {/* ── Temp Password Dialog ─────────────────────────────────────────────── */}
-      <Dialog open={!!tempPassResult} onOpenChange={(open) => !open && setTempPassResult(null)}>
-        <DialogContent className="sm:max-w-md">
+      {/* ── Reset Result Dialog ───────────────────────────────────────────────── */}
+      <Dialog open={!!resetResult} onOpenChange={(open) => !open && setResetResult(null)}>
+        <DialogContent className="w-[95vw] max-w-md rounded-xl">
           <DialogHeader>
-            <DialogTitle>Contraseña temporal generada</DialogTitle>
+            <DialogTitle>
+              {resetResult?.tempPassword ? 'Contraseña temporal' : 'Link de recuperación'}
+            </DialogTitle>
           </DialogHeader>
-          {tempPassResult && (
+          {resetResult && (
             <div className="space-y-4">
-              <p className="text-sm text-muted-foreground">
-                <strong>{tempPassResult.name}</strong> no tiene correo real configurado.
-                Comparte estos datos directamente con el miembro (WhatsApp, en persona, etc.).
-              </p>
-              <div className="rounded-lg border bg-muted/40 p-4 space-y-3">
-                <div>
-                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Email de acceso</p>
-                  <p className="font-mono text-sm break-all">{tempPassResult.loginEmail}</p>
+              {/* Email sent badge */}
+              {resetResult.emailSent !== undefined && (
+                <div className={`flex items-center gap-2 text-sm px-3 py-2 rounded-lg border ${
+                  resetResult.emailSent
+                    ? 'bg-green-50 border-green-200 text-green-800'
+                    : 'bg-amber-50 border-amber-200 text-amber-800'
+                }`}>
+                  {resetResult.emailSent
+                    ? `✓ Correo enviado a ${resetResult.recipientEmail}`
+                    : `⚠ No se pudo enviar el correo. Comparte el link manualmente.`}
                 </div>
-                <div>
-                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Contraseña temporal</p>
-                  <p className="font-mono text-2xl font-bold tracking-widest">{tempPassResult.tempPassword}</p>
+              )}
+
+              {/* Temp password */}
+              {resetResult.tempPassword && (
+                <div className="rounded-lg border bg-muted/40 p-4 space-y-3">
+                  <div>
+                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Email de acceso</p>
+                    <p className="font-mono text-sm break-all select-all">{resetResult.loginEmail}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Contraseña temporal</p>
+                    <p className="font-mono text-2xl font-bold tracking-widest select-all">{resetResult.tempPassword}</p>
+                  </div>
+                  <p className="text-xs text-muted-foreground">El miembro inicia sesión con estos datos y luego puede cambiar su contraseña.</p>
                 </div>
-              </div>
+              )}
+
+              {/* Recovery link */}
+              {resetResult.recoveryLink && (
+                <div className="rounded-lg border bg-muted/40 p-3 space-y-2">
+                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Link de recuperación (expira en 1h)</p>
+                  <p className="font-mono text-xs break-all text-primary select-all">{resetResult.recoveryLink}</p>
+                </div>
+              )}
+
               <p className="text-xs text-muted-foreground">
-                El miembro puede iniciar sesión con estas credenciales y luego cambiar su contraseña desde su perfil.
-                Una vez compartida, esta contraseña no se puede volver a ver.
+                Comparte esta información con <strong>{resetResult.name}</strong> por WhatsApp o en persona.
               </p>
             </div>
           )}
-          <DialogFooter className="gap-2">
+          <DialogFooter className="gap-2 flex-wrap">
             <Button
               variant="outline"
               onClick={() => {
-                if (!tempPassResult) return;
-                navigator.clipboard.writeText(
-                  `Email: ${tempPassResult.loginEmail}\nContraseña temporal: ${tempPassResult.tempPassword}`
-                ).catch(() => {});
+                if (!resetResult) return;
+                const lines = [];
+                if (resetResult.tempPassword) {
+                  lines.push(`Email: ${resetResult.loginEmail}`);
+                  lines.push(`Contraseña temporal: ${resetResult.tempPassword}`);
+                }
+                if (resetResult.recoveryLink) {
+                  lines.push(`Link de recuperación: ${resetResult.recoveryLink}`);
+                }
+                navigator.clipboard.writeText(lines.join('\n')).catch(() => {});
                 showSuccess('Copiado al portapapeles');
               }}
             >
               Copiar
             </Button>
-            <Button onClick={() => setTempPassResult(null)}>Cerrar</Button>
+            <Button onClick={() => setResetResult(null)}>Cerrar</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
