@@ -1,4 +1,4 @@
-import { getSupabaseAdmin } from '@/lib/supabase-admin';
+import { getSupabaseAdmin, getSupabaseAnon } from '@/lib/supabase-admin';
 
 export async function POST(request: Request) {
   const supabaseAdmin = getSupabaseAdmin();
@@ -7,7 +7,7 @@ export async function POST(request: Request) {
     const token = request.headers.get('Authorization')?.replace('Bearer ', '');
     if (!token) return Response.json({ error: 'No autorizado' }, { status: 401 });
 
-    const { data: { user: caller }, error: authErr } = await supabaseAdmin.auth.getUser(token);
+    const { data: { user: caller }, error: authErr } = await getSupabaseAnon().auth.getUser(token);
     if (authErr || !caller) return Response.json({ error: 'No autorizado' }, { status: 401 });
 
     const { data: callerProfile } = await supabaseAdmin
