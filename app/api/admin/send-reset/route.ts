@@ -21,15 +21,14 @@ export async function POST(request: Request) {
     if (!userId) return Response.json({ error: 'userId requerido' }, { status: 400 });
 
     const supabaseAdmin = getSupabaseAdmin();
-    const redirectUrl = 'https://tunaucsp.vercel.app/auth/reset-password';
 
-    // 3. Get target's current auth email
+    // 3. Get target's auth email
     const { data: authEmail, error: authEmailErr } = await supabaseAdmin
       .rpc('get_user_auth_email', { user_id: userId });
     if (authEmailErr) throw authEmailErr;
     if (!authEmail) return Response.json({ error: 'Usuario no encontrado' }, { status: 404 });
 
-    // 4. Get target profile for display name
+    // 4. Get target profile
     const { data: targetProfile, error: targetErr } = await callerClient
       .from('profiles').select('correo_electronico, first_name, last_name').eq('id', userId).single();
     if (targetErr || !targetProfile) {
@@ -38,40 +37,27 @@ export async function POST(request: Request) {
 
     const name = [targetProfile.first_name, targetProfile.last_name].filter(Boolean).join(' ') || authEmail;
 
-    // 5. For @tucsp.internal (no real email) → temp password
-    if (authEmail.endsWith('@tucsp.internal')) {
-      const { data: tempPassword, error: tempErr } = await supabaseAdmin
-        .rpc('admin_set_temp_password', { p_user_id: userId });
-      if (tempErr) throw tempErr;
-      return Response.json({
-        tempPassword,
-        loginEmail: authEmail,
-        message: `Contraseña temporal generada para ${name}`,
-      });
+    // 5. Always generate a temp password via SQL (works for ALL users regardless of GoTrue state)
+    const { data: tempPassword, error: tempErr } = await supabaseAdmin
+      .rpc('admin_set_temp_password', { p_user_id: userId });
+    if (tempErr) throw tempErr;
+
+    // 6. Best-effort: also send reset email if user has a personal real email
+    let emailSent = false;
+    const personalEmail = targetProfile.correo_electronico;
+    if (personalEmail && !personalEmail.endsWith('@tucsp.internal')) {
+      const { error: emailErr } = await getSupabaseAnon().auth.resetPasswordForEmail(personalEmail);
+      emailSent = !emailErr;
     }
-
-    // 6. Real email → generate recovery link via admin API (bypasses redirect URL whitelist)
-    const { data: linkData, error: linkErr } = await supabaseAdmin.auth.admin.generateLink({
-      type: 'recovery',
-      email: authEmail,
-      options: { redirectTo: redirectUrl },
-    });
-    if (linkErr) throw linkErr;
-
-    const recoveryLink = linkData.properties?.action_link;
-
-    // 7. Also attempt to send email (no redirectTo to avoid whitelist error)
-    // This sends the built-in Supabase email with the reset link.
-    const { error: emailErr } = await getSupabaseAnon().auth.resetPasswordForEmail(authEmail);
-    const emailSent = !emailErr;
 
     return Response.json({
       message: emailSent
-        ? `Correo enviado a ${authEmail}`
-        : `No se pudo enviar el correo automáticamente`,
-      recoveryLink,
+        ? `Correo enviado a ${personalEmail} y contraseña temporal generada`
+        : `Contraseña temporal generada para ${name}`,
+      tempPassword,
+      loginEmail: authEmail,
       emailSent,
-      recipientEmail: authEmail,
+      recipientEmail: personalEmail ?? undefined,
     });
   } catch (error) {
     return Response.json(
