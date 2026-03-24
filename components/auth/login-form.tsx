@@ -66,13 +66,14 @@ export function LoginForm() {
       return;
     }
 
+    if (resetEmail.trim().toLowerCase().endsWith('@tucsp.internal')) {
+      setResetError('Esta cuenta no tiene correo real configurado. Pide al administrador que genere una contraseña temporal desde el panel de administración.');
+      return;
+    }
+
     setResetLoading(true);
     try {
-      const { exists } = await sendPasswordReset(resetEmail.trim());
-      if (!exists) {
-        setResetError('No encontramos ninguna cuenta con ese correo. Verifica que sea el correo con el que fuiste registrado.');
-        return;
-      }
+      await sendPasswordReset(resetEmail.trim());
       setResetSent(true);
     } catch {
       setResetError('Ocurrió un error al enviar el correo. Intenta de nuevo.');
