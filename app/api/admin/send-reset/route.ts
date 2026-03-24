@@ -46,7 +46,10 @@ export async function POST(request: Request) {
     let emailSent = false;
     const personalEmail = targetProfile.correo_electronico;
     if (personalEmail && !personalEmail.endsWith('@tucsp.internal')) {
-      const { error: emailErr } = await getSupabaseAnon().auth.resetPasswordForEmail(personalEmail);
+      const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://tunaucsp.vercel.app';
+      const { error: emailErr } = await getSupabaseAnon().auth.resetPasswordForEmail(personalEmail, {
+        redirectTo: `${siteUrl}/auth/reset-password`,
+      });
       emailSent = !emailErr;
     }
 
