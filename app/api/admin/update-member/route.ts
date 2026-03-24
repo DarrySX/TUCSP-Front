@@ -21,14 +21,14 @@ export async function PUT(request: Request) {
     const { userId, email, profileUpdates } = await request.json();
     if (!userId) return Response.json({ error: 'userId requerido' }, { status: 400 });
 
-    // 1. Update auth.users email if it changed
+    // 1. Update auth.users email via SECURITY DEFINER function (bypasses admin API issues)
     if (email) {
-      const { error: authUpdateError } = await supabaseAdmin.auth.admin.updateUserById(
-        userId,
-        { email, email_confirm: true }
-      );
-      if (authUpdateError) {
-        return Response.json({ error: authUpdateError.message }, { status: 400 });
+      const { error: emailErr } = await supabaseAdmin.rpc('admin_update_user_email', {
+        user_id: userId,
+        new_email: email,
+      });
+      if (emailErr) {
+        return Response.json({ error: emailErr.message }, { status: 400 });
       }
     }
 
