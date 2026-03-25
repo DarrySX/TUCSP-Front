@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { PasswordInput } from '@/components/ui/password-input';
@@ -14,6 +14,8 @@ type Mode = 'login' | 'forgot';
 export function LoginForm() {
   const [mode, setMode] = useState<Mode>('login');
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const linkError = searchParams.get('reset_error');
 
   // Login state
   const [email, setEmail] = useState('');
@@ -177,6 +179,12 @@ export function LoginForm() {
 
   return (
     <form onSubmit={handleLogin} className="space-y-6">
+      {linkError && (
+        <div className="bg-amber-500/15 border border-amber-500/50 rounded-xl p-4 text-sm text-amber-700 dark:text-amber-400 animate-in fade-in">
+          <div className="font-medium mb-1">Enlace expirado</div>
+          {decodeURIComponent(linkError)}
+        </div>
+      )}
       {error && (
         <div className="bg-destructive/15 border border-destructive/50 rounded-xl p-4 text-sm text-destructive animate-in fade-in">
           <div className="font-medium mb-1">Error</div>
