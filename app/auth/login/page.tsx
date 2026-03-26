@@ -1,3 +1,4 @@
+import { Suspense } from 'react';
 import { LoginForm } from '@/components/auth/login-form';
 
 export default function LoginPage() {
@@ -12,7 +13,9 @@ export default function LoginPage() {
         <h1 className="text-3xl font-bold text-foreground">Bienvenido de Vuelta</h1>
         <p className="text-muted-foreground text-sm">Inicia sesión en tu cuenta de UCSP Tuna</p>
       </div>
-      <LoginForm />
+      <Suspense>
+        <LoginForm />
+      </Suspense>
     </div>
   );
 }
