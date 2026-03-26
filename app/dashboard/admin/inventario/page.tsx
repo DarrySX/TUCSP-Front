@@ -2,6 +2,7 @@
 
 import { Fragment, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { CheckIcon, ChevronsUpDownIcon } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -13,6 +14,27 @@ import {
   DialogTitle,
   DialogFooter,
 } from '@/components/ui/dialog';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+  CommandSeparator,
+} from '@/components/ui/command';
 import { getCurrentUser, supabase } from '@/lib/auth';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -108,11 +130,12 @@ export default function InventarioPage() {
   const [filterProp, setFilterProp] = useState<FilterProp>('all');
 
   // Add / Edit
-  const [showForm, setShowForm]     = useState(false);
-  const [editing, setEditing]       = useState<Instrument | null>(null);
-  const [form, setForm]             = useState({ ...EMPTY_FORM });
-  const [saving, setSaving]         = useState(false);
-  const [formError, setFormError]   = useState<string | null>(null);
+  const [showForm, setShowForm]       = useState(false);
+  const [editing, setEditing]         = useState<Instrument | null>(null);
+  const [form, setForm]               = useState({ ...EMPTY_FORM });
+  const [saving, setSaving]           = useState(false);
+  const [formError, setFormError]     = useState<string | null>(null);
+  const [respOpen, setRespOpen]       = useState(false);
 
   // History
   const [historyFor, setHistoryFor]   = useState<Instrument | null>(null);
@@ -190,11 +213,13 @@ export default function InventarioPage() {
     setEditing(null);
     setForm({ ...EMPTY_FORM });
     setFormError(null);
+    setRespOpen(false);
     setShowForm(true);
   }
 
   function openEdit(i: Instrument) {
     setEditing(i);
+    setRespOpen(false);
     setForm({
       instrumento: i.instrumento,
       marca:       i.marca       ?? '',
@@ -457,38 +482,89 @@ export default function InventarioPage() {
                   onChange={(e) => setForm((p) => ({ ...p, marca: e.target.value }))}
                   placeholder="Cordoba, Fender..." />
               </div>
+              {/* Responsable — Combobox buscable */}
               <div className="space-y-1.5">
                 <label className="text-sm font-medium">Responsable</label>
-                <select value={form.responsable}
-                  onChange={(e) => setForm((p) => ({ ...p, responsable: e.target.value }))}
-                  className="w-full px-3 py-2 border rounded-md bg-background text-sm">
-                  <option value="">— Sin asignar —</option>
-                  <option value="Universidad">Universidad</option>
-                  {members.map((m) => (
-                    <option key={m.id} value={m.display.split(' — ')[0].trim()}>
-                      {m.display}
-                    </option>
-                  ))}
-                </select>
+                <Popover open={respOpen} onOpenChange={setRespOpen}>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" role="combobox" aria-expanded={respOpen}
+                      className="w-full justify-between font-normal text-sm h-9">
+                      <span className={form.responsable ? '' : 'text-muted-foreground'}>
+                        {form.responsable || '— Sin asignar —'}
+                      </span>
+                      <ChevronsUpDownIcon className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                    <Command>
+                      <CommandInput placeholder="Buscar miembro..." />
+                      <CommandList>
+                        <CommandEmpty>Sin resultados.</CommandEmpty>
+                        <CommandGroup>
+                          <CommandItem value="__none__"
+                            onSelect={() => { setForm((p) => ({ ...p, responsable: '' })); setRespOpen(false); }}>
+                            <CheckIcon className={`mr-2 h-4 w-4 ${!form.responsable ? 'opacity-100' : 'opacity-0'}`} />
+                            Sin asignar
+                          </CommandItem>
+                          <CommandItem value="Universidad"
+                            onSelect={() => { setForm((p) => ({ ...p, responsable: 'Universidad' })); setRespOpen(false); }}>
+                            <CheckIcon className={`mr-2 h-4 w-4 ${form.responsable === 'Universidad' ? 'opacity-100' : 'opacity-0'}`} />
+                            Universidad
+                          </CommandItem>
+                        </CommandGroup>
+                        <CommandSeparator />
+                        <CommandGroup heading="Miembros de la Tuna">
+                          {members.map((m) => {
+                            const val = m.display.split(' — ')[0].trim();
+                            return (
+                              <CommandItem key={m.id} value={m.display}
+                                onSelect={() => { setForm((p) => ({ ...p, responsable: val })); setRespOpen(false); }}>
+                                <CheckIcon className={`mr-2 h-4 w-4 ${form.responsable === val ? 'opacity-100' : 'opacity-0'}`} />
+                                {m.display}
+                              </CommandItem>
+                            );
+                          })}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
               </div>
+
+              {/* Estado — shadcn Select */}
               <div className="space-y-1.5">
                 <label className="text-sm font-medium">Estado (0–5)</label>
-                <select value={form.estado}
-                  onChange={(e) => setForm((p) => ({ ...p, estado: Number(e.target.value) }))}
-                  className="w-full px-3 py-2 border rounded-md bg-background text-sm">
-                  {[5, 4, 3, 2, 1, 0].map((n) => (
-                    <option key={n} value={n}>{n} — {ESTADO_CONFIG[n].label}</option>
-                  ))}
-                </select>
+                <Select value={String(form.estado)}
+                  onValueChange={(v) => setForm((p) => ({ ...p, estado: Number(v) }))}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {[5, 4, 3, 2, 1, 0].map((n) => (
+                      <SelectItem key={n} value={String(n)}>
+                        <span className="flex items-center gap-2">
+                          <span className={`w-2 h-2 rounded-full ${ESTADO_CONFIG[n].dot}`} />
+                          {n} — {ESTADO_CONFIG[n].label}
+                        </span>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
+
+              {/* Propiedad — shadcn Select */}
               <div className="space-y-1.5">
                 <label className="text-sm font-medium">Propiedad</label>
-                <select value={form.propiedad}
-                  onChange={(e) => setForm((p) => ({ ...p, propiedad: e.target.value }))}
-                  className="w-full px-3 py-2 border rounded-md bg-background text-sm">
-                  <option value="TUCSP">TUCSP</option>
-                  <option value="UNIVERSIDAD">UNIVERSIDAD</option>
-                </select>
+                <Select value={form.propiedad}
+                  onValueChange={(v) => setForm((p) => ({ ...p, propiedad: v }))}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="TUCSP">TUCSP</SelectItem>
+                    <SelectItem value="UNIVERSIDAD">UNIVERSIDAD</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
               <div className="col-span-2 space-y-1.5">
                 <label className="text-sm font-medium">Detalles</label>
