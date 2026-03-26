@@ -140,6 +140,20 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       </header>
 
       <main className="flex-1">{children}</main>
+
+      <footer className="border-t py-4">
+        <p className="text-center text-xs text-muted-foreground/50">
+          Creado por{' '}
+          <a
+            href="https://www.linkedin.com/in/brandon-valenciac/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="hover:text-muted-foreground transition-colors duration-200 underline underline-offset-2 decoration-muted-foreground/30 hover:decoration-muted-foreground/60"
+          >
+            Brandon Valencia Calderón
+          </a>
+        </p>
+      </footer>
     </div>
   );
 }
