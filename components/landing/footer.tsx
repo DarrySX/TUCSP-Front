@@ -47,8 +47,19 @@ export function Footer() {
           </div>
         </div>
 
-        <div className="border-t border-white/10 pt-8 text-center text-sm text-white/70">
+        <div className="border-t border-white/10 pt-8 text-center text-sm text-white/70 space-y-2">
           <p>&copy; 2025 UCSP Tuna. {t.footer.rights} Built with passion for music.</p>
+          <p>
+            Creado por{' '}
+            <Link
+              href="https://www.linkedin.com/in/brandon-valenciac/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-white/50 hover:text-white transition-colors duration-200 underline underline-offset-2 decoration-white/30 hover:decoration-white/70"
+            >
+              Brandon Valencia Calderón
+            </Link>
+          </p>
         </div>
       </div>
     </footer>
