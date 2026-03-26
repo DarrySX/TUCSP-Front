@@ -99,6 +99,7 @@ export default function InventarioPage() {
   const router = useRouter();
   const [userId, setUserId]         = useState<string | null>(null);
   const [instruments, setInstruments] = useState<Instrument[]>([]);
+  const [members, setMembers]       = useState<{ id: string; display: string }[]>([]);
   const [isLoading, setIsLoading]   = useState(true);
 
   // Filters
@@ -132,9 +133,23 @@ export default function InventarioPage() {
         return;
       }
       setUserId(user.id);
-      await loadInstruments();
+      await Promise.all([loadInstruments(), loadMembers()]);
     })();
   }, [router]);
+
+  async function loadMembers() {
+    const { data } = await supabase
+      .from('profiles')
+      .select('id, first_name, last_name, mote')
+      .order('first_name');
+    setMembers(
+      (data ?? []).map((m: { id: string; first_name: string | null; last_name: string | null; mote: string | null }) => {
+        const name = [m.first_name, m.last_name].filter(Boolean).join(' ');
+        const display = m.mote ? `${m.mote}${name ? ` — ${name}` : ''}` : name || 'Sin nombre';
+        return { id: m.id, display };
+      })
+    );
+  }
 
   async function loadInstruments() {
     setIsLoading(true);
@@ -381,21 +396,30 @@ export default function InventarioPage() {
                       <span className="line-clamp-1 text-xs">{i.referencia ?? '—'}</span>
                     </td>
                     <td className="px-4 py-3">
-                      <div className="flex items-center gap-1 justify-end">
-                        <button onClick={() => openHistory(i)}
-                          className="text-xs px-2 py-1 rounded text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition"
-                          title="Historial">
-                          📋
+                      <div className="flex items-center gap-0.5 justify-end">
+                        <button onClick={() => openHistory(i)} title="Ver historial"
+                          className="p-1.5 rounded-md text-muted-foreground hover:text-primary hover:bg-primary/10 transition">
+                          <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none"
+                            stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
+                            <path d="M3 3v5h5"/><path d="M12 7v5l4 2"/>
+                          </svg>
                         </button>
-                        <button onClick={() => openEdit(i)}
-                          className="text-xs px-2 py-1 rounded text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition"
-                          title="Editar">
-                          ✏
+                        <button onClick={() => openEdit(i)} title="Editar"
+                          className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-secondary/60 transition">
+                          <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none"
+                            stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                          </svg>
                         </button>
-                        <button onClick={() => setDeleteTarget(i)}
-                          className="text-xs px-2 py-1 rounded text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition"
-                          title="Eliminar">
-                          🗑
+                        <button onClick={() => setDeleteTarget(i)} title="Eliminar"
+                          className="p-1.5 rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition">
+                          <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none"
+                            stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/>
+                            <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                          </svg>
                         </button>
                       </div>
                     </td>
@@ -435,9 +459,17 @@ export default function InventarioPage() {
               </div>
               <div className="space-y-1.5">
                 <label className="text-sm font-medium">Responsable</label>
-                <Input value={form.responsable}
+                <select value={form.responsable}
                   onChange={(e) => setForm((p) => ({ ...p, responsable: e.target.value }))}
-                  placeholder="Mote o Universidad" />
+                  className="w-full px-3 py-2 border rounded-md bg-background text-sm">
+                  <option value="">— Sin asignar —</option>
+                  <option value="Universidad">Universidad</option>
+                  {members.map((m) => (
+                    <option key={m.id} value={m.display.split(' — ')[0].trim()}>
+                      {m.display}
+                    </option>
+                  ))}
+                </select>
               </div>
               <div className="space-y-1.5">
                 <label className="text-sm font-medium">Estado (0–5)</label>
