@@ -33,7 +33,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     { href: '/dashboard', label: 'Inicio' },
     { href: '/dashboard/events', label: 'Eventos' },
     { href: '/dashboard/profile', label: 'Mi Perfil' },
-    ...(isSuperAdmin ? [{ href: '/dashboard/admin/users', label: 'Administración' }] : []),
+    ...(isSuperAdmin ? [
+      { href: '/dashboard/admin/users', label: 'Administración' },
+      { href: '/dashboard/admin/estadisticas', label: 'Estadísticas' },
+    ] : []),
   ];
 
   function isActive(href: string) {
