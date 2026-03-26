@@ -10,6 +10,7 @@ import { getCurrentUser, signOut, supabase } from '@/lib/auth';
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const [isSigningOut, setIsSigningOut] = useState(false);
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
   const router = useRouter();
@@ -22,6 +23,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       setUserId(user.id);
       const { data } = await supabase.from('profiles').select('role').eq('id', user.id).single();
       setIsSuperAdmin(data?.role === 'super_admin');
+      setIsAdmin(data?.role === 'super_admin' || data?.role === 'tuno_admin');
     }
     checkRole();
   }, []);
@@ -39,6 +41,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     ...(isSuperAdmin ? [
       { href: '/dashboard/admin/users', label: 'Administración' },
       { href: '/dashboard/admin/estadisticas', label: 'Estadísticas' },
+    ] : []),
+    ...(isAdmin ? [
+      { href: '/dashboard/admin/inventario', label: 'Inventario' },
     ] : []),
   ];
 
