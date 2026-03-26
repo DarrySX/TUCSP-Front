@@ -4,12 +4,14 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
+import { NotificationPanel } from '@/components/notifications/notification-panel';
 import { getCurrentUser, signOut, supabase } from '@/lib/auth';
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const [isSigningOut, setIsSigningOut] = useState(false);
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [userId, setUserId] = useState<string | null>(null);
   const router = useRouter();
   const pathname = usePathname();
 
@@ -17,6 +19,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     async function checkRole() {
       const user = await getCurrentUser();
       if (!user) return;
+      setUserId(user.id);
       const { data } = await supabase.from('profiles').select('role').eq('id', user.id).single();
       setIsSuperAdmin(data?.role === 'super_admin');
     }
@@ -75,6 +78,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           </nav>
 
           <div className="flex items-center gap-2">
+            {userId && <NotificationPanel userId={userId} />}
             <Button
               onClick={handleSignOut}
               disabled={isSigningOut}
