@@ -106,7 +106,7 @@ export function NotificationPanel({ userId }: { userId: string }) {
           <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/>
         </svg>
         {unread > 0 && (
-          <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center px-1">
+          <span className="absolute -top-0.5 -right-0.5 min-w-4.5 h-4.5 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center px-1">
             {unread > 9 ? '9+' : unread}
           </span>
         )}
@@ -114,7 +114,7 @@ export function NotificationPanel({ userId }: { userId: string }) {
 
       {/* Panel */}
       <Sheet open={open} onOpenChange={setOpen}>
-        <SheetContent side="right" className="w-full sm:w-[400px] p-0 flex flex-col">
+        <SheetContent side="right" className="w-full sm:w-100 p-0 flex flex-col">
           <SheetHeader className="px-5 py-4 border-b shrink-0">
             <div className="flex items-center justify-between gap-3">
               <SheetTitle className="text-base">
