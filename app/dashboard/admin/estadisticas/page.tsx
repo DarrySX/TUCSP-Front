@@ -286,7 +286,7 @@ export default function EstadisticasPage() {
                         <Fragment key={ev.id}>
                           <tr className="border-b last:border-0 hover:bg-secondary/20 transition">
                             <td className="px-4 py-3 whitespace-nowrap text-muted-foreground">
-                              {new Date(ev.date).toLocaleDateString('es-PE', { day: 'numeric', month: 'short', year: 'numeric' })}
+                              {new Date(ev.date).toLocaleDateString('es-PE', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'America/Lima' })}
                             </td>
                             <td className="px-4 py-3 whitespace-nowrap">
                               <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full">
