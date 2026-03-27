@@ -62,19 +62,36 @@ const STATUS_COLORS: Record<string, string> = {
   cancelled: 'bg-red-50 text-red-600 border-red-200',
 };
 
-// ── Helpers ────────────────────────────────────────────────────────────────────
+// ── Timezone helpers (Peru = America/Lima, UTC-5, no DST) ─────────────────────
 
+const LIMA_TZ = 'America/Lima';
+
+/** Formats a UTC ISO string as date in Lima timezone */
 function formatEventDate(dateStr: string) {
-  const d = new Date(dateStr);
-  return d.toLocaleDateString('es-PE', {
+  return new Date(dateStr).toLocaleDateString('es-PE', {
     weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
+    timeZone: LIMA_TZ,
   });
 }
 
+/** Formats a UTC ISO string as time in Lima timezone */
 function formatEventTime(dateStr: string) {
   return new Date(dateStr).toLocaleTimeString('es-PE', {
     hour: '2-digit', minute: '2-digit',
+    timeZone: LIMA_TZ,
   });
+}
+
+/** Extracts "YYYY-MM-DD" from a UTC ISO string, in Lima timezone */
+function peruDateInput(iso: string): string {
+  return new Intl.DateTimeFormat('en-CA', { timeZone: LIMA_TZ }).format(new Date(iso));
+}
+
+/** Extracts "HH:MM" from a UTC ISO string, in Lima timezone */
+function peruTimeInput(iso: string): string {
+  return new Intl.DateTimeFormat('en-GB', {
+    timeZone: LIMA_TZ, hour: '2-digit', minute: '2-digit', hour12: false,
+  }).format(new Date(iso));
 }
 
 // ── Component ──────────────────────────────────────────────────────────────────
@@ -172,7 +189,7 @@ export default function EventsPage() {
     setIsCreating(true);
     setCreateError(null);
     try {
-      const datetime = `${newEvent.date}T${newEvent.time || '00:00'}:00`;
+      const datetime = `${newEvent.date}T${newEvent.time || '00:00'}:00-05:00`;
       const { error } = await supabase.from('events').insert({
         title: newEvent.title,
         description: newEvent.description || null,
@@ -196,12 +213,11 @@ export default function EventsPage() {
   // ── Edit event ───────────────────────────────────────────────────────────────
 
   function handleOpenEdit(ev: EventRow) {
-    const d = new Date(ev.date);
     setEditForm({
       title: ev.title,
       description: ev.description ?? '',
-      date: d.toISOString().split('T')[0],
-      time: d.toTimeString().slice(0, 5),
+      date: peruDateInput(ev.date),
+      time: peruTimeInput(ev.date),
       location: ev.location ?? '',
       event_type: ev.event_type,
       status: ev.status,
@@ -216,7 +232,7 @@ export default function EventsPage() {
     setIsEditing(true);
     setEditError(null);
     try {
-      const datetime = `${editForm.date}T${editForm.time || '00:00'}:00`;
+      const datetime = `${editForm.date}T${editForm.time || '00:00'}:00-05:00`;
       const { error } = await supabase.from('events').update({
         title: editForm.title,
         description: editForm.description || null,
