@@ -92,16 +92,11 @@ export function NotificationPanel({ userId }: { userId: string }) {
     setUnread(0);
   }
 
-  function handleOpen() {
-    setOpen(true);
-    markAllRead();
-  }
-
   return (
     <>
       {/* Bell button */}
       <button
-        onClick={handleOpen}
+        onClick={() => setOpen(true)}
         className="relative p-2 rounded-md hover:bg-secondary/50 transition"
         aria-label="Notificaciones"
       >
@@ -121,14 +116,35 @@ export function NotificationPanel({ userId }: { userId: string }) {
       <Sheet open={open} onOpenChange={setOpen}>
         <SheetContent side="right" className="w-full sm:w-[400px] p-0 flex flex-col">
           <SheetHeader className="px-5 py-4 border-b shrink-0">
-            <SheetTitle className="flex items-center justify-between text-base">
-              Notificaciones
-              {items.length > 0 && (
-                <span className="text-xs text-muted-foreground font-normal">
-                  {unread === 0 ? 'Todo leído' : `${unread} sin leer`}
+            <div className="flex items-center justify-between gap-3">
+              <SheetTitle className="text-base">
+                Notificaciones
+                {unread > 0 && (
+                  <span className="ml-2 inline-flex items-center justify-center min-w-5 h-5 bg-primary text-primary-foreground text-[11px] font-bold rounded-full px-1.5">
+                    {unread}
+                  </span>
+                )}
+              </SheetTitle>
+
+              {unread > 0 ? (
+                <button
+                  onClick={markAllRead}
+                  className="group flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground border border-transparent hover:border-border rounded-md px-2.5 py-1.5 transition-all"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="w-3.5 h-3.5 text-primary group-hover:scale-110 transition-transform" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M20 6 9 17l-5-5"/>
+                  </svg>
+                  Marcar todo leído
+                </button>
+              ) : items.length > 0 ? (
+                <span className="flex items-center gap-1 text-xs text-muted-foreground/60">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M20 6 9 17l-5-5"/>
+                  </svg>
+                  Al día
                 </span>
-              )}
-            </SheetTitle>
+              ) : null}
+            </div>
           </SheetHeader>
 
           <div className="flex-1 overflow-y-auto">
