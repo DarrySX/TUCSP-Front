@@ -302,7 +302,7 @@ export default function InventarioPage() {
   // ── Render ────────────────────────────────────────────────────────────────
 
   return (
-    <div className="w-full px-4 md:px-8 py-8 space-y-6 max-w-[1400px] mx-auto">
+    <div className="w-full px-4 md:px-8 py-8 space-y-6 max-w-350 mx-auto">
 
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -408,7 +408,7 @@ export default function InventarioPage() {
                     <td className="px-4 py-3 text-muted-foreground hidden sm:table-cell">{i.marca ?? '—'}</td>
                     <td className="px-4 py-3">{i.responsable ?? '—'}</td>
                     <td className="px-4 py-3"><EstadoBadge estado={i.estado} /></td>
-                    <td className="px-4 py-3 text-muted-foreground hidden lg:table-cell max-w-[200px]">
+                    <td className="px-4 py-3 text-muted-foreground hidden lg:table-cell max-w-50">
                       <span className="line-clamp-1">{i.detalles ?? '—'}</span>
                     </td>
                     <td className="px-4 py-3 hidden md:table-cell">
@@ -418,7 +418,7 @@ export default function InventarioPage() {
                         {i.propiedad}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-muted-foreground hidden xl:table-cell max-w-[200px]">
+                    <td className="px-4 py-3 text-muted-foreground hidden xl:table-cell max-w-50">
                       <span className="line-clamp-1 text-xs">{i.referencia ?? '—'}</span>
                     </td>
                     <td className="px-4 py-3">
