@@ -112,6 +112,7 @@ function formatDate(d: string) {
   return new Date(d).toLocaleDateString('es-PE', {
     day: '2-digit', month: 'short', year: 'numeric',
     hour: '2-digit', minute: '2-digit',
+    timeZone: 'America/Lima',
   });
 }
 
@@ -640,9 +641,9 @@ export default function InventarioPage() {
               <div className="space-y-1 mt-2">
                 {history.map((h, idx) => (
                   <Fragment key={h.id}>
-                    {idx === 0 || new Date(history[idx - 1].created_at).toDateString() !== new Date(h.created_at).toDateString() ? (
+                    {idx === 0 || new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Lima' }).format(new Date(history[idx - 1].created_at)) !== new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Lima' }).format(new Date(h.created_at)) ? (
                       <p className="text-xs font-semibold text-muted-foreground pt-3 pb-1 px-1">
-                        {new Date(h.created_at).toLocaleDateString('es-PE', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+                        {new Date(h.created_at).toLocaleDateString('es-PE', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: 'America/Lima' })}
                       </p>
                     ) : null}
                     <div className="flex gap-3 items-start py-2 px-2 rounded-lg hover:bg-secondary/20 transition">
@@ -663,7 +664,7 @@ export default function InventarioPage() {
                             </span>
                           </span>
                           <span className="text-xs text-muted-foreground shrink-0">
-                            {new Date(h.created_at).toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' })}
+                            {new Date(h.created_at).toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Lima' })}
                           </span>
                         </div>
                         <p className="text-xs text-muted-foreground mt-0.5">
