@@ -146,11 +146,24 @@ const ATTEND_CONFIG: Record<AttendStatus, { label: string; activeClass: string; 
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
+const LIMA_TZ = 'America/Lima';
+
 function formatDateTime(dateStr: string) {
   return new Date(dateStr).toLocaleDateString('es-PE', {
     weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
     hour: '2-digit', minute: '2-digit',
+    timeZone: LIMA_TZ,
   });
+}
+
+function peruDateInput(iso: string): string {
+  return new Intl.DateTimeFormat('en-CA', { timeZone: LIMA_TZ }).format(new Date(iso));
+}
+
+function peruTimeInput(iso: string): string {
+  return new Intl.DateTimeFormat('en-GB', {
+    timeZone: LIMA_TZ, hour: '2-digit', minute: '2-digit', hour12: false,
+  }).format(new Date(iso));
 }
 
 function timeAgo(dateStr: string) {
@@ -306,12 +319,11 @@ export default function EventDetailPage() {
 
   function handleOpenEdit() {
     if (!event) return;
-    const d = new Date(event.date);
     setEditForm({
       title: event.title,
       description: event.description ?? '',
-      date: d.toISOString().split('T')[0],
-      time: d.toTimeString().slice(0, 5),
+      date: peruDateInput(event.date),
+      time: peruTimeInput(event.date),
       location: event.location ?? '',
       event_type: event.event_type,
       status: event.status,
@@ -326,7 +338,7 @@ export default function EventDetailPage() {
     setIsEditing(true);
     setEditError(null);
     try {
-      const datetime = `${editForm.date}T${editForm.time || '00:00'}:00`;
+      const datetime = `${editForm.date}T${editForm.time || '00:00'}:00-05:00`;
       const { error: err } = await supabase.from('events').update({
         title: editForm.title,
         description: editForm.description || null,
