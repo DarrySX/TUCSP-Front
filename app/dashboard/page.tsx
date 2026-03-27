@@ -197,9 +197,9 @@ export default function UserDashboard() {
                       </span>
                       <h3 className="font-semibold mt-2">{event.title}</h3>
                       <p className="text-sm text-muted-foreground mt-1">
-                        📅 {new Date(event.date).toLocaleDateString('es-PE', { weekday: 'short', day: 'numeric', month: 'short' })}
+                        📅 {new Date(event.date).toLocaleDateString('es-PE', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'America/Lima' })}
                         {' · '}
-                        🕐 {new Date(event.date).toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' })}
+                        🕐 {new Date(event.date).toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Lima' })}
                       </p>
                       {event.location && <p className="text-sm text-muted-foreground">📍 {event.location}</p>}
                       <p className="text-sm text-muted-foreground">👥 {event.rsvp_count} confirmados</p>
