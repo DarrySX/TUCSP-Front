@@ -90,6 +90,12 @@ export default function EventsPage() {
   const [showCreate, setShowCreate] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
+  const [editingEvent, setEditingEvent] = useState<EventRow | null>(null);
+  const [editForm, setEditForm] = useState({ title: '', description: '', date: '', time: '', location: '', event_type: 'presentacion', status: 'upcoming' });
+  const [isEditing, setIsEditing] = useState(false);
+  const [editError, setEditError] = useState<string | null>(null);
+  const [deletingEventId, setDeletingEventId] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const [newEvent, setNewEvent] = useState({
     title: '',
@@ -184,6 +190,66 @@ export default function EventsPage() {
       setCreateError(err instanceof Error ? err.message : 'Error al crear el evento');
     } finally {
       setIsCreating(false);
+    }
+  }
+
+  // ── Edit event ───────────────────────────────────────────────────────────────
+
+  function handleOpenEdit(ev: EventRow) {
+    const d = new Date(ev.date);
+    setEditForm({
+      title: ev.title,
+      description: ev.description ?? '',
+      date: d.toISOString().split('T')[0],
+      time: d.toTimeString().slice(0, 5),
+      location: ev.location ?? '',
+      event_type: ev.event_type,
+      status: ev.status,
+    });
+    setEditingEvent(ev);
+    setEditError(null);
+  }
+
+  async function handleEdit(e: React.SyntheticEvent<HTMLFormElement>) {
+    e.preventDefault();
+    if (!editingEvent || !userId) return;
+    setIsEditing(true);
+    setEditError(null);
+    try {
+      const datetime = `${editForm.date}T${editForm.time || '00:00'}:00`;
+      const { error } = await supabase.from('events').update({
+        title: editForm.title,
+        description: editForm.description || null,
+        date: datetime,
+        location: editForm.location || null,
+        event_type: editForm.event_type,
+        status: editForm.status,
+        updated_by: userId,
+      }).eq('id', editingEvent.id);
+      if (error) throw error;
+      setEditingEvent(null);
+      await loadAll();
+    } catch (err) {
+      setEditError(err instanceof Error ? err.message : 'Error al editar el evento');
+    } finally {
+      setIsEditing(false);
+    }
+  }
+
+  // ── Delete event ─────────────────────────────────────────────────────────────
+
+  async function handleDeleteEvent() {
+    if (!deletingEventId) return;
+    setIsDeleting(true);
+    try {
+      const { error } = await supabase.from('events').delete().eq('id', deletingEventId);
+      if (error) throw error;
+      setDeletingEventId(null);
+      await loadAll();
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsDeleting(false);
     }
   }
 
@@ -292,7 +358,7 @@ export default function EventsPage() {
                         </span>
                       ) : null
                     )}
-                    <div className="flex gap-2 ml-auto">
+                    <div className="flex items-center gap-1.5 ml-auto">
                       {isUpcoming && (
                         <Button
                           size="sm"
@@ -309,6 +375,32 @@ export default function EventsPage() {
                       <Button size="sm" variant="outline" asChild>
                         <Link href={`/dashboard/events/${event.id}`}>Ver detalle</Link>
                       </Button>
+                      {isAdmin && (
+                        <>
+                          <button
+                            onClick={() => handleOpenEdit(event)}
+                            className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-secondary/60 transition"
+                            title="Editar evento"
+                          >
+                            <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                              <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                            </svg>
+                          </button>
+                          <button
+                            onClick={() => setDeletingEventId(event.id)}
+                            className="p-1.5 rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition"
+                            title="Eliminar evento"
+                          >
+                            <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                              <polyline points="3 6 5 6 21 6"/>
+                              <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+                              <path d="M10 11v6M14 11v6"/>
+                              <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
+                            </svg>
+                          </button>
+                        </>
+                      )}
                     </div>
                   </div>
                 </Card>
@@ -317,6 +409,123 @@ export default function EventsPage() {
           </div>
         )}
       </div>
+
+      {/* Edit event dialog */}
+      <Dialog open={!!editingEvent} onOpenChange={(open) => !open && setEditingEvent(null)}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Editar Evento</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleEdit} className="space-y-4">
+            {editError && (
+              <p className="text-sm text-destructive bg-destructive/10 p-3 rounded-lg">{editError}</p>
+            )}
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Título *</label>
+              <Input
+                value={editForm.title}
+                onChange={(e) => setEditForm((p) => ({ ...p, title: e.target.value }))}
+                placeholder="Concierto de Primavera"
+                required
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Fecha *</label>
+                <Input
+                  type="date"
+                  value={editForm.date}
+                  onChange={(e) => setEditForm((p) => ({ ...p, date: e.target.value }))}
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Hora</label>
+                <Input
+                  type="time"
+                  value={editForm.time}
+                  onChange={(e) => setEditForm((p) => ({ ...p, time: e.target.value }))}
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Tipo *</label>
+                <select
+                  value={editForm.event_type}
+                  onChange={(e) => setEditForm((p) => ({ ...p, event_type: e.target.value }))}
+                  className="w-full px-3 py-2 border rounded-md bg-background text-sm"
+                >
+                  {Object.entries(EVENT_TYPE_LABELS).map(([val, label]) => (
+                    <option key={val} value={val}>{label}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Estado</label>
+                <select
+                  value={editForm.status}
+                  onChange={(e) => setEditForm((p) => ({ ...p, status: e.target.value }))}
+                  className="w-full px-3 py-2 border rounded-md bg-background text-sm"
+                >
+                  {Object.entries(STATUS_LABELS).map(([val, label]) => (
+                    <option key={val} value={val}>{label}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Lugar</label>
+              <Input
+                value={editForm.location}
+                onChange={(e) => setEditForm((p) => ({ ...p, location: e.target.value }))}
+                placeholder="Auditorio Principal"
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Descripción</label>
+              <Textarea
+                value={editForm.description}
+                onChange={(e) => setEditForm((p) => ({ ...p, description: e.target.value }))}
+                placeholder="Detalles del evento..."
+                rows={3}
+              />
+            </div>
+            <DialogFooter className="gap-2">
+              <Button type="button" variant="outline" onClick={() => setEditingEvent(null)}>
+                Cancelar
+              </Button>
+              <Button type="submit" disabled={isEditing}>
+                {isEditing ? 'Guardando...' : 'Guardar cambios'}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete confirmation dialog */}
+      <Dialog open={!!deletingEventId} onOpenChange={(open) => !open && setDeletingEventId(null)}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Eliminar evento</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            Esta acción es permanente. Se eliminarán también todos los registros de asistencia y confirmaciones asociados.
+          </p>
+          <DialogFooter className="gap-2 mt-2">
+            <Button variant="outline" onClick={() => setDeletingEventId(null)}>
+              Cancelar
+            </Button>
+            <Button
+              variant="destructive"
+              disabled={isDeleting}
+              onClick={handleDeleteEvent}
+            >
+              {isDeleting ? 'Eliminando...' : 'Sí, eliminar'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Create event dialog */}
       <Dialog open={showCreate} onOpenChange={setShowCreate}>
