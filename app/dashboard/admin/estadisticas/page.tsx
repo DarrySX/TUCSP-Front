@@ -17,6 +17,7 @@ interface EventSummary {
   date: string;
   event_type: string;
   attended: number;
+  late: number;
   absent: number;
 }
 
@@ -27,12 +28,14 @@ interface MemberStat {
   numero_roa: number | null;
   role: string;
   attended: number;
+  late: number;
   absent: number;
 }
 
 interface Metrics {
   totalEvents: number;
   totalAttended: number;
+  totalLate: number;
   totalAbsent: number;
   attendanceRate: number;
   events: EventSummary[];
@@ -80,7 +83,7 @@ export default function EstadisticasPage() {
   const [metrics, setMetrics] = useState<Metrics | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [expandedEvent, setExpandedEvent] = useState<string | null>(null);
-  const [eventAttendees, setEventAttendees] = useState<Record<string, { name: string; attended: boolean }[]>>({});
+  const [eventAttendees, setEventAttendees] = useState<Record<string, { name: string; mote: string | null; attended: boolean; late: boolean }[]>>({});
 
   useEffect(() => {
     (async () => {
@@ -115,16 +118,16 @@ export default function EstadisticasPage() {
 
       const events = eventsRaw ?? [];
       if (events.length === 0) {
-        setMetrics({ totalEvents: 0, totalAttended: 0, totalAbsent: 0, attendanceRate: 0, events: [], members: [] });
+        setMetrics({ totalEvents: 0, totalAttended: 0, totalLate: 0, totalAbsent: 0, attendanceRate: 0, events: [], members: [] });
         return;
       }
 
       const eventIds = events.map((e) => e.id);
 
-      // Attendance records for those events
+      // Attendance records — use full_name (not first_name/last_name) and include is_late
       const { data: attendanceRaw } = await supabase
         .from('event_attendance')
-        .select('event_id, user_id, attended, profiles(id, first_name, last_name, mote, numero_roa, role)')
+        .select('event_id, user_id, attended, is_late, profile:user_id(id, full_name, mote, numero_roa, role)')
         .in('event_id', eventIds);
 
       const attendance = attendanceRaw ?? [];
@@ -132,7 +135,7 @@ export default function EstadisticasPage() {
       // Per-event counts
       const eventMap: Record<string, EventSummary> = {};
       for (const ev of events) {
-        eventMap[ev.id] = { ...ev, attended: 0, absent: 0 };
+        eventMap[ev.id] = { ...ev, attended: 0, late: 0, absent: 0 };
       }
 
       // Per-member counts
@@ -140,44 +143,49 @@ export default function EstadisticasPage() {
 
       for (const rec of attendance) {
         const ev = eventMap[rec.event_id];
+        const isLate = !!(rec as { is_late?: boolean }).is_late;
+        const isPresent = !!(rec.attended);
+
         if (ev) {
-          if (rec.attended) ev.attended++;
-          else ev.absent++;
+          if (!isPresent)  ev.absent++;
+          else if (isLate) ev.late++;
+          else             ev.attended++;
         }
 
-        const p = rec.profiles as {
-          id: string; first_name: string | null; last_name: string | null;
-          mote: string | null; numero_roa: number | null; role: string;
-        } | null;
+        const p = (rec as unknown as { profile?: { id: string; full_name: string | null; mote: string | null; numero_roa: number | null; role: string } | null }).profile ?? null;
         if (!p) continue;
 
         if (!memberMap[p.id]) {
           memberMap[p.id] = {
             id: p.id,
-            name: [p.first_name, p.last_name].filter(Boolean).join(' ') || 'Sin nombre',
+            name: p.full_name || 'Sin nombre',
             mote: p.mote,
             numero_roa: p.numero_roa,
             role: p.role,
             attended: 0,
+            late: 0,
             absent: 0,
           };
         }
-        if (rec.attended) memberMap[p.id].attended++;
-        else memberMap[p.id].absent++;
+        if (!isPresent)  memberMap[p.id].absent++;
+        else if (isLate) memberMap[p.id].late++;
+        else             memberMap[p.id].attended++;
       }
 
       const eventSummaries = Object.values(eventMap);
       const members = Object.values(memberMap).sort((a, b) => b.absent - a.absent || a.name.localeCompare(b.name));
 
       const totalAttended = eventSummaries.reduce((s, e) => s + e.attended, 0);
-      const totalAbsent = eventSummaries.reduce((s, e) => s + e.absent, 0);
-      const total = totalAttended + totalAbsent;
+      const totalLate     = eventSummaries.reduce((s, e) => s + e.late, 0);
+      const totalAbsent   = eventSummaries.reduce((s, e) => s + e.absent, 0);
+      const total = totalAttended + totalLate + totalAbsent;
 
       setMetrics({
         totalEvents: events.length,
         totalAttended,
+        totalLate,
         totalAbsent,
-        attendanceRate: total > 0 ? Math.round((totalAttended / total) * 100) : 0,
+        attendanceRate: total > 0 ? Math.round(((totalAttended + totalLate) / total) * 100) : 0,
         events: eventSummaries,
         members,
       });
@@ -193,16 +201,17 @@ export default function EstadisticasPage() {
     }
     const { data } = await supabase
       .from('event_attendance')
-      .select('attended, profiles(first_name, last_name, mote)')
+      .select('attended, is_late, profile:user_id(full_name, mote)')
       .eq('event_id', eventId);
 
-    const list = (data ?? []).map((r) => {
-      const p = r.profiles as { first_name: string | null; last_name: string | null; mote: string | null } | null;
-      return {
-        name: p ? [p.first_name, p.last_name].filter(Boolean).join(' ') || p.mote || '—' : '—',
-        attended: r.attended as boolean,
-      };
-    }).sort((a, b) => Number(b.attended) - Number(a.attended) || a.name.localeCompare(b.name));
+    const list = ((data ?? []) as unknown as { attended: boolean; is_late: boolean; profile: { full_name: string | null; mote: string | null } | null }[])
+      .map((r) => ({
+        name: r.profile?.full_name || r.profile?.mote || '—',
+        mote: r.profile?.mote ?? null,
+        attended: r.attended,
+        late: r.is_late,
+      }))
+      .sort((a, b) => Number(b.attended) - Number(a.attended) || a.name.localeCompare(b.name));
 
     setEventAttendees((prev) => ({ ...prev, [eventId]: list }));
     setExpandedEvent(eventId);
@@ -250,10 +259,11 @@ export default function EstadisticasPage() {
         <div className="space-y-8">
 
           {/* Summary cards */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
             <MetricCard label="Eventos realizados" value={metrics.totalEvents} icon="🎵" />
-            <MetricCard label="Total asistencias" value={metrics.totalAttended} icon="✓" color="green" />
-            <MetricCard label="Total inasistencias" value={metrics.totalAbsent} icon="✗" color="red" />
+            <MetricCard label="Asistencias" value={metrics.totalAttended} icon="✓" color="green" />
+            <MetricCard label="Tardanzas" value={metrics.totalLate} icon="⚠" color="amber" />
+            <MetricCard label="Inasistencias" value={metrics.totalAbsent} icon="✗" color="red" />
             <MetricCard label="Tasa de asistencia" value={`${metrics.attendanceRate}%`} icon="📊"
               color={metrics.attendanceRate >= 70 ? 'green' : metrics.attendanceRate >= 50 ? 'amber' : 'red'} />
           </div>
@@ -272,6 +282,7 @@ export default function EstadisticasPage() {
                       <th className="text-left px-4 py-3 font-medium text-muted-foreground">Tipo</th>
                       <th className="text-left px-4 py-3 font-medium text-muted-foreground">Evento</th>
                       <th className="text-center px-4 py-3 font-medium text-green-700">Asistieron</th>
+                      <th className="text-center px-4 py-3 font-medium text-amber-600 hidden sm:table-cell">Tardanza</th>
                       <th className="text-center px-4 py-3 font-medium text-red-600">Faltaron</th>
                       <th className="text-center px-4 py-3 font-medium text-muted-foreground">Tasa</th>
                       <th className="px-4 py-3" />
@@ -279,8 +290,8 @@ export default function EstadisticasPage() {
                   </thead>
                   <tbody>
                     {metrics.events.map((ev) => {
-                      const total = ev.attended + ev.absent;
-                      const rate = total > 0 ? Math.round((ev.attended / total) * 100) : null;
+                      const total = ev.attended + ev.late + ev.absent;
+                      const rate = total > 0 ? Math.round(((ev.attended + ev.late) / total) * 100) : null;
                       const isExpanded = expandedEvent === ev.id;
                       return (
                         <Fragment key={ev.id}>
@@ -299,6 +310,7 @@ export default function EstadisticasPage() {
                               </Link>
                             </td>
                             <td className="px-4 py-3 text-center font-semibold text-green-700">{ev.attended}</td>
+                            <td className="px-4 py-3 text-center font-semibold text-amber-600 hidden sm:table-cell">{ev.late}</td>
                             <td className="px-4 py-3 text-center font-semibold text-red-600">{ev.absent}</td>
                             <td className="px-4 py-3 text-center">
                               {rate !== null ? (
@@ -308,27 +320,34 @@ export default function EstadisticasPage() {
                               ) : '—'}
                             </td>
                             <td className="px-4 py-3 text-right">
-                              <button
-                                onClick={() => loadEventDetail(ev.id)}
-                                className="text-xs text-muted-foreground hover:text-foreground transition underline underline-offset-2"
-                              >
-                                {isExpanded ? 'Ocultar' : 'Ver lista'}
-                              </button>
+                              {total > 0 && (
+                                <button
+                                  onClick={() => loadEventDetail(ev.id)}
+                                  className="text-xs text-muted-foreground hover:text-foreground transition underline underline-offset-2"
+                                >
+                                  {isExpanded ? 'Ocultar' : 'Ver lista'}
+                                </button>
+                              )}
                             </td>
                           </tr>
                           {isExpanded && eventAttendees[ev.id] && (
                             <tr className="bg-secondary/10">
-                              <td colSpan={7} className="px-6 py-4">
+                              <td colSpan={8} className="px-6 py-4">
                                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
-                                  {eventAttendees[ev.id].map((p, i) => (
-                                    <div key={i} className={`flex items-center gap-2 text-sm rounded-md px-2 py-1 ${
-                                      p.attended ? 'bg-green-50 text-green-800 dark:bg-green-950/30 dark:text-green-400'
-                                        : 'bg-red-50 text-red-800 dark:bg-red-950/30 dark:text-red-400'
-                                    }`}>
-                                      <span>{p.attended ? '✓' : '✗'}</span>
-                                      <span className="truncate">{p.name}</span>
-                                    </div>
-                                  ))}
+                                  {eventAttendees[ev.id].map((p, i) => {
+                                    const cls = !p.attended
+                                      ? 'bg-red-50 text-red-800 dark:bg-red-950/30 dark:text-red-400'
+                                      : p.late
+                                        ? 'bg-amber-50 text-amber-800 dark:bg-amber-950/30 dark:text-amber-400'
+                                        : 'bg-green-50 text-green-800 dark:bg-green-950/30 dark:text-green-400';
+                                    const icon = !p.attended ? '✗' : p.late ? '⚠' : '✓';
+                                    return (
+                                      <div key={i} className={`flex items-center gap-2 text-sm rounded-md px-2 py-1 ${cls}`}>
+                                        <span className="shrink-0">{icon}</span>
+                                        <span className="truncate">{p.name}</span>
+                                      </div>
+                                    );
+                                  })}
                                   {eventAttendees[ev.id].length === 0 && (
                                     <p className="text-sm text-muted-foreground col-span-full">Sin registros de asistencia.</p>
                                   )}
@@ -360,14 +379,15 @@ export default function EstadisticasPage() {
                       <th className="text-left px-4 py-3 font-medium text-muted-foreground hidden sm:table-cell">ROA</th>
                       <th className="text-left px-4 py-3 font-medium text-muted-foreground hidden md:table-cell">Rol</th>
                       <th className="text-center px-4 py-3 font-medium text-red-600">Faltas</th>
+                      <th className="text-center px-4 py-3 font-medium text-amber-600 hidden sm:table-cell">Tardanzas</th>
                       <th className="text-center px-4 py-3 font-medium text-green-700">Asistencias</th>
                       <th className="text-center px-4 py-3 font-medium text-muted-foreground">Tasa</th>
                     </tr>
                   </thead>
                   <tbody>
                     {metrics.members.map((m, i) => {
-                      const total = m.attended + m.absent;
-                      const rate = total > 0 ? Math.round((m.attended / total) * 100) : null;
+                      const total = m.attended + m.late + m.absent;
+                      const rate = total > 0 ? Math.round(((m.attended + m.late) / total) * 100) : null;
                       const highlight = m.absent >= 3;
                       return (
                         <tr key={m.id}
@@ -391,6 +411,7 @@ export default function EstadisticasPage() {
                               {m.absent >= 3 && <span className="ml-1 text-xs">⚠</span>}
                             </span>
                           </td>
+                          <td className="px-4 py-3 text-center font-semibold text-amber-600 hidden sm:table-cell">{m.late}</td>
                           <td className="px-4 py-3 text-center font-semibold text-green-700">{m.attended}</td>
                           <td className="px-4 py-3 text-center">
                             {rate !== null ? (
