@@ -104,7 +104,7 @@ function AttendTooltip({ active, payload, label }: {
   if (!active || !payload?.length) return null;
   const visible = payload.filter((p) => p.value > 0);
   return (
-    <div className="bg-background border shadow-xl rounded-xl px-4 py-3 text-sm min-w-[170px]">
+    <div className="bg-background border shadow-xl rounded-xl px-4 py-3 text-sm min-w-42.5">
       <p className="font-semibold text-xs text-muted-foreground mb-2 uppercase tracking-wide">{label}</p>
       {visible.map((p, i) => (
         <div key={i} className="flex items-center justify-between gap-6 leading-[1.75]">
@@ -128,7 +128,7 @@ function MemberTooltip({ active, payload, label }: {
 }) {
   if (!active || !payload?.length) return null;
   return (
-    <div className="bg-background border shadow-xl rounded-xl px-4 py-3 text-sm min-w-[160px]">
+    <div className="bg-background border shadow-xl rounded-xl px-4 py-3 text-sm min-w-40">
       <p className="font-semibold text-xs text-muted-foreground mb-2 uppercase tracking-wide">{label}</p>
       {payload.map((p, i) => (
         <div key={i} className="flex items-center justify-between gap-6 leading-[1.75]">
