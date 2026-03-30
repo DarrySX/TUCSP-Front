@@ -1,11 +1,19 @@
 'use client';
 
-import { Fragment, useEffect, useState } from 'react';
+import { Fragment, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Card } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import { getCurrentUser, supabase } from '@/lib/auth';
+import {
+  ResponsiveContainer,
+  BarChart, Bar,
+  ComposedChart, Line,
+  AreaChart, Area,
+  PieChart, Pie, Cell,
+  XAxis, YAxis, CartesianGrid,
+  Tooltip, Legend,
+} from 'recharts';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -73,6 +81,66 @@ function rangeStart(range: Range): Date {
   else if (range === '6m') d.setMonth(d.getMonth() - 6);
   else d.setFullYear(d.getFullYear() - 1);
   return d;
+}
+
+// ── Chart colors ──────────────────────────────────────────────────────────────
+
+const C = {
+  attended: '#16a34a',
+  late:     '#d97706',
+  absent:   '#ef4444',
+  primary:  '#7c3aed',
+  grid:     '#e2e8f0',
+  tick:     '#94a3b8',
+};
+
+// ── Custom tooltips ───────────────────────────────────────────────────────────
+
+function AttendTooltip({ active, payload, label }: {
+  active?: boolean;
+  payload?: { name: string; value: number; fill: string; color: string }[];
+  label?: string;
+}) {
+  if (!active || !payload?.length) return null;
+  const visible = payload.filter((p) => p.value > 0);
+  return (
+    <div className="bg-background border shadow-xl rounded-xl px-4 py-3 text-sm min-w-[170px]">
+      <p className="font-semibold text-xs text-muted-foreground mb-2 uppercase tracking-wide">{label}</p>
+      {visible.map((p, i) => (
+        <div key={i} className="flex items-center justify-between gap-6 leading-[1.75]">
+          <span className="flex items-center gap-1.5 text-muted-foreground">
+            <span className="w-2.5 h-2.5 rounded-sm inline-block shrink-0" style={{ background: p.fill ?? p.color }} />
+            {p.name}
+          </span>
+          <span className="font-bold tabular-nums">
+            {p.name === 'Tasa %' ? `${p.value}%` : p.value}
+          </span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function MemberTooltip({ active, payload, label }: {
+  active?: boolean;
+  payload?: { name: string; value: number; fill: string }[];
+  label?: string;
+}) {
+  if (!active || !payload?.length) return null;
+  return (
+    <div className="bg-background border shadow-xl rounded-xl px-4 py-3 text-sm min-w-[160px]">
+      <p className="font-semibold text-xs text-muted-foreground mb-2 uppercase tracking-wide">{label}</p>
+      {payload.map((p, i) => (
+        <div key={i} className="flex items-center justify-between gap-6 leading-[1.75]">
+          <span className="flex items-center gap-1.5 text-muted-foreground">
+            <span className="w-2.5 h-2.5 rounded-sm inline-block shrink-0" style={{ background: p.fill }} />
+            {p.name}
+          </span>
+          <span className="font-bold tabular-nums">{p.value}</span>
+        </div>
+      ))}
+    </div>
+  );
 }
 
 // ── Page ──────────────────────────────────────────────────────────────────────
@@ -217,6 +285,63 @@ export default function EstadisticasPage() {
     setExpandedEvent(eventId);
   }
 
+  // ── Chart data ───────────────────────────────────────────────────────────────
+
+  const chartData = useMemo(() => {
+    if (!metrics) return [];
+    const evs = [...metrics.events].reverse();
+    if (range === '3m') {
+      return evs.map((ev) => {
+        const total = ev.attended + ev.late + ev.absent;
+        return {
+          label: new Date(ev.date).toLocaleDateString('es-PE', { day: 'numeric', month: 'short', timeZone: 'America/Lima' }),
+          Asistieron: ev.attended,
+          Tardanza:   ev.late,
+          Faltaron:   ev.absent,
+          tasa: total > 0 ? Math.round(((ev.attended + ev.late) / total) * 100) : 0,
+        };
+      });
+    }
+    // Group by month for 6m / 1y
+    const map: Record<string, { label: string; Asistieron: number; Tardanza: number; Faltaron: number; tasa: number }> = {};
+    evs.forEach((ev) => {
+      const key = new Intl.DateTimeFormat('es-PE', { year: 'numeric', month: 'short', timeZone: 'America/Lima' }).format(new Date(ev.date));
+      if (!map[key]) map[key] = { label: key, Asistieron: 0, Tardanza: 0, Faltaron: 0, tasa: 0 };
+      map[key].Asistieron += ev.attended;
+      map[key].Tardanza   += ev.late;
+      map[key].Faltaron   += ev.absent;
+    });
+    return Object.values(map).map((m) => {
+      const total = m.Asistieron + m.Tardanza + m.Faltaron;
+      return { ...m, tasa: total > 0 ? Math.round(((m.Asistieron + m.Tardanza) / total) * 100) : 0 };
+    });
+  }, [metrics, range]);
+
+  const donutData = useMemo(() => {
+    if (!metrics) return [];
+    return [
+      { name: 'Asistieron', value: metrics.totalAttended, color: C.attended },
+      { name: 'Tardanza',   value: metrics.totalLate,     color: C.late },
+      { name: 'Faltaron',   value: metrics.totalAbsent,   color: C.absent },
+    ].filter((d) => d.value > 0);
+  }, [metrics]);
+
+  const memberBarData = useMemo(() => {
+    if (!metrics) return [];
+    return metrics.members
+      .filter((m) => m.absent > 0 || m.late > 0)
+      .slice(0, 8)
+      .reverse()
+      .map((m) => ({
+        name:     m.mote || m.name.split(' ')[0],
+        fullName: m.name,
+        Faltas:    m.absent,
+        Tardanzas: m.late,
+      }));
+  }, [metrics]);
+
+  const hasChartData = chartData.some((d) => d.Asistieron + d.Tardanza + d.Faltaron > 0);
+
   // ── Render ─────────────────────────────────────────────────────────────────
 
   return (
@@ -268,11 +393,142 @@ export default function EstadisticasPage() {
               color={metrics.attendanceRate >= 70 ? 'green' : metrics.attendanceRate >= 50 ? 'amber' : 'red'} />
           </div>
 
+          {/* ── Charts ─────────────────────────────────────────────────────── */}
+          {hasChartData && (
+            <div className="space-y-5">
+              <div>
+                <h2 className="text-base font-semibold">Análisis Visual</h2>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Visualización interactiva — {range === '3m' ? 'por evento' : 'agrupado por mes'}
+                </p>
+              </div>
+
+              {/* Row 1: Stacked bar + Donut */}
+              <div className="grid lg:grid-cols-3 gap-5">
+
+                {/* Stacked bar + rate line */}
+                <Card className="lg:col-span-2 p-5">
+                  <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-widest mb-4">
+                    Asistencia por {range === '3m' ? 'evento' : 'mes'}
+                  </p>
+                  <ResponsiveContainer width="100%" height={272}>
+                    <ComposedChart data={chartData} margin={{ top: 8, right: 32, bottom: 52, left: 0 }}>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={C.grid} />
+                      <XAxis dataKey="label" tick={{ fontSize: 10, fill: C.tick }} angle={-40} textAnchor="end" interval={0} />
+                      <YAxis yAxisId="l" tick={{ fontSize: 11, fill: C.tick }} allowDecimals={false} width={28} />
+                      <YAxis yAxisId="r" orientation="right" unit="%" tick={{ fontSize: 11, fill: C.tick }} domain={[0, 100]} width={36} />
+                      <Tooltip content={<AttendTooltip />} />
+                      <Legend iconType="square" wrapperStyle={{ fontSize: 12, paddingTop: 4 }} />
+                      <Bar yAxisId="l" dataKey="Asistieron" stackId="s" fill={C.attended} />
+                      <Bar yAxisId="l" dataKey="Tardanza"   stackId="s" fill={C.late} />
+                      <Bar yAxisId="l" dataKey="Faltaron"   stackId="s" fill={C.absent} radius={[3, 3, 0, 0]} />
+                      <Line yAxisId="r" type="monotone" dataKey="tasa" name="Tasa %" stroke={C.primary} strokeWidth={2.5}
+                        dot={{ r: 3.5, fill: C.primary, strokeWidth: 0 }} activeDot={{ r: 5 }} />
+                    </ComposedChart>
+                  </ResponsiveContainer>
+                </Card>
+
+                {/* Donut with center label */}
+                <Card className="p-5 flex flex-col">
+                  <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-widest mb-3">
+                    Distribución global
+                  </p>
+                  <div className="flex-1 relative flex items-center justify-center">
+                    <ResponsiveContainer width="100%" height={200}>
+                      <PieChart>
+                        <Pie data={donutData} cx="50%" cy="50%" innerRadius={62} outerRadius={90}
+                          paddingAngle={3} dataKey="value" strokeWidth={0}>
+                          {donutData.map((d, i) => <Cell key={i} fill={d.color} />)}
+                        </Pie>
+                        <Tooltip formatter={(v, name) => [`${v}`, name]} />
+                      </PieChart>
+                    </ResponsiveContainer>
+                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                      <div className="text-center">
+                        <div className="text-3xl font-bold tabular-nums">{metrics!.attendanceRate}%</div>
+                        <div className="text-[11px] text-muted-foreground mt-0.5">asistencia</div>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="mt-4 space-y-2">
+                    {donutData.map((d, i) => (
+                      <div key={i} className="flex items-center justify-between text-sm">
+                        <div className="flex items-center gap-2">
+                          <span className="w-2.5 h-2.5 rounded-sm shrink-0" style={{ background: d.color }} />
+                          <span className="text-muted-foreground">{d.name}</span>
+                        </div>
+                        <span className="font-semibold tabular-nums">{d.value}</span>
+                      </div>
+                    ))}
+                  </div>
+                </Card>
+              </div>
+
+              {/* Row 2: Area trend + Members bar */}
+              <div className="grid lg:grid-cols-2 gap-5">
+
+                {/* Area — tasa trend */}
+                <Card className="p-5">
+                  <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-widest mb-4">
+                    Tendencia de tasa de asistencia
+                  </p>
+                  <ResponsiveContainer width="100%" height={220}>
+                    <AreaChart data={chartData} margin={{ top: 8, right: 16, bottom: 52, left: 0 }}>
+                      <defs>
+                        <linearGradient id="gradTasa" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%"  stopColor={C.primary} stopOpacity={0.18} />
+                          <stop offset="95%" stopColor={C.primary} stopOpacity={0} />
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={C.grid} />
+                      <XAxis dataKey="label" tick={{ fontSize: 10, fill: C.tick }} angle={-35} textAnchor="end" interval={0} />
+                      <YAxis tick={{ fontSize: 11, fill: C.tick }} unit="%" domain={[0, 100]} width={36} />
+                      <Tooltip formatter={(v) => [`${v}%`, 'Tasa de asistencia']}
+                        contentStyle={{ borderRadius: 12, fontSize: 13 }} labelStyle={{ fontWeight: 600 }} />
+                      <Area type="monotone" dataKey="tasa" name="Tasa %" stroke={C.primary} strokeWidth={2.5}
+                        fill="url(#gradTasa)"
+                        dot={{ r: 4, fill: C.primary, strokeWidth: 0 }} activeDot={{ r: 6 }} />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </Card>
+
+                {/* Horizontal bar — top members */}
+                {memberBarData.length > 0 ? (
+                  <Card className="p-5">
+                    <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-widest mb-4">
+                      Top miembros — faltas y tardanzas
+                    </p>
+                    <ResponsiveContainer width="100%" height={Math.max(220, memberBarData.length * 34 + 24)}>
+                      <BarChart data={memberBarData} layout="vertical" margin={{ top: 4, right: 28, bottom: 4, left: 8 }}>
+                        <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke={C.grid} />
+                        <XAxis type="number" tick={{ fontSize: 11, fill: C.tick }} allowDecimals={false} />
+                        <YAxis type="category" dataKey="name" tick={{ fontSize: 11, fill: C.tick }} width={72} />
+                        <Tooltip content={<MemberTooltip />} />
+                        <Legend iconType="square" wrapperStyle={{ fontSize: 12 }} />
+                        <Bar dataKey="Faltas"    fill={C.absent} stackId="m" />
+                        <Bar dataKey="Tardanzas" fill={C.late}   stackId="m" radius={[0, 3, 3, 0]} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </Card>
+                ) : (
+                  <Card className="p-5 flex items-center justify-center text-sm text-muted-foreground">
+                    Sin faltas registradas en el período.
+                  </Card>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* ── Detalle por evento ─────────────────────────────────────────── */}
+          <div>
+            <h2 className="text-base font-semibold">Detalle por evento</h2>
+            <p className="text-xs text-muted-foreground mt-0.5 mb-3">
+              {RANGE_LABELS[range]} · solo eventos finalizados
+            </p>
+          </div>
+
           {/* Events table */}
           <div>
-            <h2 className="text-base font-semibold mb-3">
-              Eventos en {RANGE_LABELS[range].toLowerCase()}
-            </h2>
             <Card className="overflow-hidden">
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
