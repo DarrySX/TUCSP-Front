@@ -56,8 +56,10 @@ export async function POST(request: Request) {
     });
 
     if (!res.ok) {
-      const err = await res.json();
-      throw new Error(err.message ?? 'Error al enviar correo');
+      const err = await res.json().catch(() => ({}));
+      throw new Error(
+        err.message ?? err.name ?? `Resend error ${res.status}: ${res.statusText}`
+      );
     }
 
     // Build WhatsApp deep-link message (for client-side redirect)
