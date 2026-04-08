@@ -1,46 +1,15 @@
 'use client';
 
 import { useState } from 'react';
-import { useLanguage } from '@/app/providers';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 
 export function Services() {
-  const { t } = useLanguage();
-
-  const [name, setName]       = useState('');
-  const [details, setDetails] = useState('');
-  const [status, setStatus]   = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
+  const [name, setName]         = useState('');
+  const [details, setDetails]   = useState('');
+  const [status, setStatus]     = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   const [errorMsg, setErrorMsg] = useState('');
-
-  const services = [
-    {
-      title: t.services.serenadeTitle,
-      description: t.services.serenadeDesc,
-      price: t.services.serenadePrice,
-      features: ['2-3 músicos', 'Formato acústico', '1-2 horas'],
-    },
-    {
-      title: t.services.ceremonyTitle,
-      description: t.services.ceremonyDesc,
-      price: t.services.ceremonyPrice,
-      features: ['3-4 músicos', 'Montaje completo', '2-3 horas'],
-      featured: true,
-    },
-    {
-      title: t.services.celebrationTitle,
-      description: t.services.celebrationDesc,
-      price: t.services.celebrationPrice,
-      features: ['5+ músicos', 'Equipo completo', '3-5 horas'],
-    },
-    {
-      title: t.services.customTitle,
-      description: t.services.customDesc,
-      price: t.services.customPrice,
-      features: ['Tamaño personalizado', 'Duración flexible', 'Todo a medida'],
-    },
-  ];
 
   async function handleSubmit(e: React.SyntheticEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -75,68 +44,7 @@ export function Services() {
   }
 
   return (
-    <>
-      {/* ── Paquetes ─────────────────────────────────────────────────────── */}
-      <section id="packages" className="py-20 md:py-28">
-        <div className="container mx-auto px-4">
-          <div className="text-center space-y-4 mb-16">
-            <h2 className="text-3xl md:text-4xl font-bold">{t.services.title}</h2>
-            <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-              {t.services.subtitle}
-            </p>
-          </div>
-
-          <div className="grid md:grid-cols-4 gap-6">
-            {services.map((service, index) => (
-              <div
-                key={index}
-                className={`rounded-xl p-8 transition-all ${
-                  service.featured
-                    ? 'bg-primary text-white shadow-lg scale-105'
-                    : 'bg-secondary border border-border'
-                }`}
-              >
-                <h3 className={`font-bold text-xl mb-2 ${service.featured ? 'text-white' : ''}`}>
-                  {service.title}
-                </h3>
-                <p className={`text-sm mb-4 ${service.featured ? 'text-white/90' : 'text-muted-foreground'}`}>
-                  {service.description}
-                </p>
-                <div className="mb-6">
-                  <p className={`text-2xl font-bold mb-4 ${service.featured ? 'text-white' : 'text-primary'}`}>
-                    {service.price}
-                  </p>
-                  <ul className="space-y-2">
-                    {service.features.map((feature, fIndex) => (
-                      <li
-                        key={fIndex}
-                        className={`text-sm flex items-center gap-2 ${
-                          service.featured ? 'text-white/80' : 'text-foreground'
-                        }`}
-                      >
-                        <span>✓</span> {feature}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-                <Button
-                  size="sm"
-                  className="w-full"
-                  variant={service.featured ? 'secondary' : 'default'}
-                  onClick={() => {
-                    document.getElementById('contact-form')?.scrollIntoView({ behavior: 'smooth' });
-                  }}
-                >
-                  {t.cta.button1}
-                </Button>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ── Formulario de contacto ───────────────────────────────────────── */}
-      <section id="contact-form" className="py-20 md:py-28 bg-secondary/30">
+    <section id="contact-form" className="py-20 md:py-28 bg-secondary/30">
         <div className="container mx-auto px-4">
           <div className="max-w-2xl mx-auto">
             <div className="text-center mb-10">
@@ -243,6 +151,5 @@ export function Services() {
           </div>
         </div>
       </section>
-    </>
   );
 }
