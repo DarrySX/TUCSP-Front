@@ -7,6 +7,7 @@ import { Textarea } from '@/components/ui/textarea';
 
 export function Services() {
   const [name, setName]         = useState('');
+  const [phone, setPhone]       = useState('');
   const [details, setDetails]   = useState('');
   const [status, setStatus]     = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   const [errorMsg, setErrorMsg] = useState('');
@@ -22,7 +23,7 @@ export function Services() {
       const res = await fetch('/api/contact', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: name.trim(), details: details.trim() }),
+        body: JSON.stringify({ name: name.trim(), phone: phone.trim(), details: details.trim() }),
       });
 
       const data = await res.json();
@@ -31,6 +32,7 @@ export function Services() {
 
       setStatus('success');
       setName('');
+      setPhone('');
       setDetails('');
 
       // Open WhatsApp in new tab with pre-filled message
@@ -97,6 +99,21 @@ export function Services() {
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     required
+                    disabled={status === 'loading'}
+                    className="h-11"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-sm font-semibold" htmlFor="contact-phone">
+                    Número de contacto
+                  </label>
+                  <Input
+                    id="contact-phone"
+                    type="tel"
+                    placeholder="+51 999 999 999"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
                     disabled={status === 'loading'}
                     className="h-11"
                   />
