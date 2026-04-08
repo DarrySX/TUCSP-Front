@@ -222,10 +222,13 @@ export default function ProfilePage() {
 
   const formatDate = (dateStr: string | null) => {
     if (!dateStr) return '—';
+    // date-only columns (YYYY-MM-DD) come from Postgres as UTC midnight.
+    // Using timeZone:'UTC' prevents the Lima UTC-5 offset from shifting the day back.
     return new Date(dateStr).toLocaleDateString('es-PE', {
       year: 'numeric',
       month: 'long',
       day: 'numeric',
+      timeZone: 'UTC',
     });
   };
 
