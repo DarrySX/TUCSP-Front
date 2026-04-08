@@ -58,11 +58,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         <div className="container mx-auto px-4 h-16 flex items-center justify-between">
 
           {/* Logo */}
-          <Link href="/dashboard" className="flex items-center gap-2 hover:opacity-80 transition">
-            <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-              <span className="text-white font-bold">♪</span>
-            </div>
-            <span className="font-bold text-lg">UCSP Tuna</span>
+          <Link href="/dashboard" className="-my-1 flex items-center hover:opacity-80 transition">
+            <img src="/LogoTUCSP.png" alt="UCSP Tuna" className="h-12 w-auto object-contain" />
           </Link>
 
           {/* Desktop nav */}
