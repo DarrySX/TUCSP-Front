@@ -1,5 +1,6 @@
 'use client';
 
+import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { useLanguage } from '@/app/providers';
@@ -47,12 +48,16 @@ export function Hero() {
             </div>
           </div>
 
-          {/* Right side - Visual element */}
-          <div className="relative h-96 md:h-full min-h-96 rounded-2xl bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center">
-            <div className="text-white text-center space-y-4">
-              <div className="text-6xl md:text-7xl animate-bounce">♪</div>
-              <p className="text-xl font-semibold">Professional Live Music</p>
-            </div>
+          {/* Right side - Group photo */}
+          <div className="relative h-96 md:h-full min-h-120 rounded-2xl overflow-hidden shadow-2xl">
+            <Image
+              src="/Grupal1.jpg"
+              alt="UCSP Tuna"
+              fill
+              className="object-cover object-center"
+              priority
+            />
+            <div className="absolute inset-0 bg-linear-to-t from-black/40 via-transparent to-transparent" />
           </div>
         </div>
       </div>
