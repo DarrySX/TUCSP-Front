@@ -17,15 +17,10 @@ export function CTA() {
           </p>
         </div>
 
-        <div className="flex flex-col sm:flex-row gap-4 justify-center">
+        <div className="flex justify-center">
           <Button size="lg" variant="secondary" asChild>
-            <a href="mailto:info@ucsp-tuna.edu?subject=Event Booking Inquiry">
+            <Link href="#contact-form">
               {t.cta.button1}
-            </a>
-          </Button>
-          <Button size="lg" variant="outline" className="border-white hover:bg-white/10 bg-transparent" asChild>
-            <Link href="#packages">
-              {t.cta.button2}
             </Link>
           </Button>
         </div>
