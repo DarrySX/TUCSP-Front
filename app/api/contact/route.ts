@@ -48,7 +48,7 @@ export async function POST(request: Request) {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        from: 'UCSP Tuna <onboarding@resend.dev>',
+        from: 'UCSP Tuna <contacto@darrysdev.me>',
         to:   [toEmail],
         subject: `Nueva solicitud de contratación — ${name}`,
         html,
