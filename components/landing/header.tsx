@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { useLanguage } from '@/app/providers';
 import { useEffect, useState } from 'react';
@@ -36,12 +37,16 @@ export function Header() {
   return (
     <header className="sticky top-0 z-50 bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/60 border-b">
       <nav className="container mx-auto px-4 h-16 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-            <span className="text-white font-bold text-lg">♪</span>
-          </div>
-          <span className="font-bold text-lg text-primary">UCSP Tuna</span>
-        </div>
+        <Link href="/" className="flex items-center">
+          <Image
+            src="/LogoTUCSP.png"
+            alt="TUCSP Tuna"
+            width={72}
+            height={72}
+            className="h-12 w-auto object-contain"
+            priority
+          />
+        </Link>
 
         <div className="hidden md:flex items-center gap-8">
           <Link href="#services" className="text-sm text-foreground hover:text-primary transition">
