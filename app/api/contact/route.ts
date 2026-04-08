@@ -1,6 +1,6 @@
 export async function POST(request: Request) {
   try {
-    const { name, details } = await request.json();
+    const { name, phone, details } = await request.json();
 
     if (!name?.trim() || !details?.trim()) {
       return Response.json({ error: 'Nombre y detalles son requeridos' }, { status: 400 });
@@ -25,6 +25,12 @@ export async function POST(request: Request) {
               <td style="padding:10px 0;border-bottom:1px solid #ede8ff">
                 <span style="font-size:12px;color:#7c3aed;font-weight:600;text-transform:uppercase;letter-spacing:.05em">Nombre de contacto</span><br/>
                 <span style="font-size:16px;font-weight:600;color:#1a1a2e">${name}</span>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:10px 0;border-bottom:1px solid #ede8ff">
+                <span style="font-size:12px;color:#7c3aed;font-weight:600;text-transform:uppercase;letter-spacing:.05em">Número de contacto</span><br/>
+                <span style="font-size:16px;font-weight:600;color:#1a1a2e">${phone || '—'}</span>
               </td>
             </tr>
             <tr>
@@ -64,7 +70,7 @@ export async function POST(request: Request) {
 
     // Build WhatsApp deep-link message (for client-side redirect)
     const waMsgEncoded = encodeURIComponent(
-      `🎵 *Nueva solicitud — UCSP Tuna*\n\n*Contacto:* ${name}\n\n*Detalles:*\n${details}`
+      `🎵 *Nueva solicitud — UCSP Tuna*\n\n*Contacto:* ${name}${phone ? `\n*Teléfono:* ${phone}` : ''}\n\n*Detalles:*\n${details}`
     );
     const waUrl = `https://wa.me/51941178294?text=${waMsgEncoded}`;
 
