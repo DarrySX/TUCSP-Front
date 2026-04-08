@@ -36,14 +36,14 @@ export function Header() {
 
   return (
     <header className="sticky top-0 z-50 bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/60 border-b">
-      <nav className="container mx-auto px-4 h-16 flex items-center justify-between">
-        <Link href="/" className="flex items-center">
+      <nav className="container mx-auto px-4 h-20 flex items-center justify-between">
+        <Link href="/" className="-my-2 flex items-center">
           <Image
             src="/LogoTUCSP.png"
             alt="TUCSP Tuna"
-            width={72}
-            height={72}
-            className="h-12 w-auto object-contain"
+            width={160}
+            height={80}
+            className="h-16 w-auto object-contain"
             priority
           />
         </Link>
