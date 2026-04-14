@@ -364,7 +364,7 @@ export default function EventDetailPage() {
     if (!userId) return;
     setIsDeleting(true);
     try {
-      const { error: err } = await supabase.from('events').delete().eq('id', eventId);
+      const { error: err } = await supabase.rpc('admin_delete_event', { p_event_id: eventId });
       if (err) throw err;
       router.push('/dashboard/events');
     } catch (err) {
