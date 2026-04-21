@@ -81,6 +81,17 @@ interface MemberOption {
   role: string;
 }
 
+interface ReplacementRequest {
+  id: string;
+  event_id: string;
+  requester_id: string;
+  replacement_id: string;
+  status: 'pending' | 'accepted' | 'declined';
+  created_at: string;
+  requester?: { full_name: string | null; mote: string | null } | null;
+  replacement?: { full_name: string | null; mote: string | null } | null;
+}
+
 type AttendStatus = 'present' | 'late' | 'absent';
 
 // ── Constants ──────────────────────────────────────────────────────────────────
@@ -246,6 +257,17 @@ export default function EventDetailPage() {
   const [registerLoading, setRegisterLoading]     = useState(false);
   const [registerLoadingId, setRegisterLoadingId] = useState<string | null>(null);
 
+  // Replacement request state
+  const [showReplaceModal, setShowReplaceModal]   = useState(false);
+  const [replaceSearch, setReplaceSearch]         = useState('');
+  const [replaceMembers, setReplaceMembers]       = useState<MemberOption[]>([]);
+  const [replaceMembersLoading, setReplaceMembersLoading] = useState(false);
+  const [selectedReplacement, setSelectedReplacement] = useState<MemberOption | null>(null);
+  const [replaceSubmitting, setReplaceSubmitting] = useState(false);
+  const [pendingReplaceOut, setPendingReplaceOut] = useState<ReplacementRequest | null>(null);
+  const [pendingReplaceIn, setPendingReplaceIn]   = useState<ReplacementRequest | null>(null);
+  const [respondingReplace, setRespondingReplace] = useState(false);
+
   useEffect(() => { loadAll(); }, [eventId]);
 
   async function loadAll() {
@@ -263,6 +285,8 @@ export default function EventDetailPage() {
         { data: attendanceData },
         { data: commentsData },
         { data: myRsvp },
+        { data: replaceOutData },
+        { data: replaceInData },
       ] = await Promise.all([
         supabase.from('profiles').select('role').eq('id', user.id).single(),
         supabase.from('events').select('*, creator:created_by(full_name, mote)').eq('id', eventId).single(),
@@ -270,6 +294,12 @@ export default function EventDetailPage() {
         supabase.from('event_attendance').select('id, user_id, attended, is_late, marked_at, marker:marked_by(full_name), profile:user_id(full_name, mote, avatar_url, numero_roa)').eq('event_id', eventId),
         supabase.from('event_comments').select('id, user_id, content, edited, created_at, updated_at, profile:user_id(full_name, mote, avatar_url)').eq('event_id', eventId).order('created_at'),
         supabase.from('event_rsvps').select('id').match({ event_id: eventId, user_id: user.id }).maybeSingle(),
+        supabase.from('rsvp_replacement_requests')
+          .select('*, replacement:replacement_id(full_name, mote)')
+          .eq('event_id', eventId).eq('requester_id', user.id).eq('status', 'pending').maybeSingle(),
+        supabase.from('rsvp_replacement_requests')
+          .select('*, requester:requester_id(full_name, mote)')
+          .eq('event_id', eventId).eq('replacement_id', user.id).eq('status', 'pending').maybeSingle(),
       ]);
 
       if (eventErr) { setError('Evento no encontrado'); return; }
@@ -280,6 +310,8 @@ export default function EventDetailPage() {
       setAttendance((attendanceData as unknown as AttendanceEntry[]) ?? []);
       setComments((commentsData as unknown as CommentEntry[]) ?? []);
       setHasRsvp(!!myRsvp);
+      setPendingReplaceOut((replaceOutData as unknown as ReplacementRequest) ?? null);
+      setPendingReplaceIn((replaceInData as unknown as ReplacementRequest) ?? null);
 
       const map: Record<string, AttendStatus> = {};
       (attendanceData as unknown as AttendanceEntry[])?.forEach((a) => {
@@ -380,6 +412,66 @@ export default function EventDetailPage() {
       setError(err instanceof Error ? err.message : 'Error al eliminar');
       setIsDeleting(false);
       setShowDeleteConfirm(false);
+    }
+  }
+
+  // ── Replacement request ───────────────────────────────────────────────────────
+
+  async function openReplaceModal() {
+    setSelectedReplacement(null);
+    setReplaceSearch('');
+    setShowReplaceModal(true);
+    setReplaceMembersLoading(true);
+    try {
+      const rsvpUserIds = new Set(rsvps.map((r) => r.user_id));
+      const { data } = await supabase
+        .from('profiles')
+        .select('id, full_name, mote, numero_roa, role')
+        .order('full_name');
+      setReplaceMembers(
+        ((data as MemberOption[]) ?? []).filter((m) => !rsvpUserIds.has(m.id) && m.id !== userId)
+      );
+    } finally {
+      setReplaceMembersLoading(false);
+    }
+  }
+
+  async function handleRequestReplacement() {
+    if (!selectedReplacement) return;
+    setReplaceSubmitting(true);
+    try {
+      const { data, error: rpcErr } = await supabase.rpc('request_rsvp_replacement', {
+        p_event_id: eventId,
+        p_replacement_id: selectedReplacement.id,
+      });
+      if (rpcErr) throw rpcErr;
+      setShowReplaceModal(false);
+      await loadAll();
+      setSuccessMsg('Solicitud enviada. El miembro recibirá una notificación.');
+      setTimeout(() => setSuccessMsg(null), 4000);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Error al enviar solicitud');
+    } finally {
+      setReplaceSubmitting(false);
+    }
+  }
+
+  async function handleRespondReplacement(accept: boolean) {
+    if (!pendingReplaceIn) return;
+    setRespondingReplace(true);
+    try {
+      const { error: rpcErr } = await supabase.rpc('respond_rsvp_replacement', {
+        p_request_id: pendingReplaceIn.id,
+        p_accept: accept,
+      });
+      if (rpcErr) throw rpcErr;
+      await loadAll();
+      setSuccessMsg(accept ? 'Aceptaste el reemplazo. ¡Ahora estás en la lista!' : 'Rechazaste la solicitud.');
+      setTimeout(() => setSuccessMsg(null), 4000);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Error al responder');
+    } finally {
+      setRespondingReplace(false);
     }
   }
 
@@ -590,6 +682,39 @@ export default function EventDetailPage() {
           </div>
         )}
 
+        {/* Incoming replacement request banner */}
+        {pendingReplaceIn && (
+          <div className="bg-primary/5 border border-primary/20 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center gap-3">
+            <div className="flex-1">
+              <p className="text-sm font-semibold text-primary">Solicitud de reemplazo</p>
+              <p className="text-sm text-muted-foreground mt-0.5">
+                <span className="font-medium text-foreground">
+                  {(pendingReplaceIn.requester as any)?.full_name ?? '—'}
+                </span>{' '}
+                te pide que lo reemplaces en este evento.
+              </p>
+            </div>
+            <div className="flex gap-2 shrink-0">
+              <Button
+                size="sm"
+                onClick={() => handleRespondReplacement(true)}
+                disabled={respondingReplace}
+              >
+                {respondingReplace ? '...' : 'Aceptar'}
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                className="text-destructive border-destructive hover:bg-destructive/10"
+                onClick={() => handleRespondReplacement(false)}
+                disabled={respondingReplace}
+              >
+                Rechazar
+              </Button>
+            </div>
+          </div>
+        )}
+
         {/* Event header */}
         <Card className="p-6">
           <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
@@ -618,15 +743,30 @@ export default function EventDetailPage() {
             </div>
 
             <div className="flex flex-col gap-2 sm:items-end">
-              {isUpcoming && (
-                <Button
-                  onClick={handleRsvp}
-                  disabled={rsvpLoading}
-                  variant={hasRsvp ? 'outline' : 'default'}
-                  className={hasRsvp ? 'text-destructive border-destructive hover:bg-destructive/10' : ''}
-                >
-                  {rsvpLoading ? '...' : hasRsvp ? 'Cancelar asistencia' : 'Confirmar asistencia'}
+              {isUpcoming && !hasRsvp && (
+                <Button onClick={handleRsvp} disabled={rsvpLoading}>
+                  {rsvpLoading ? '...' : 'Confirmar asistencia'}
                 </Button>
+              )}
+              {isUpcoming && hasRsvp && !pendingReplaceOut && (
+                <Button
+                  variant="outline"
+                  className="text-destructive border-destructive hover:bg-destructive/10"
+                  onClick={openReplaceModal}
+                  disabled={rsvpLoading}
+                >
+                  Cancelar asistencia
+                </Button>
+              )}
+              {isUpcoming && pendingReplaceOut && (
+                <div className="flex flex-col items-end gap-1">
+                  <span className="text-xs text-amber-600 font-medium bg-amber-50 border border-amber-200 px-2.5 py-1 rounded-full">
+                    ⏳ Reemplazo pendiente
+                  </span>
+                  <span className="text-xs text-muted-foreground">
+                    Esperando a {(pendingReplaceOut.replacement as any)?.full_name ?? '—'}
+                  </span>
+                </div>
               )}
               {isAdmin && isUpcoming && (
                 <Button size="sm" variant="outline" disabled={statusChanging}
@@ -1017,6 +1157,80 @@ export default function EventDetailPage() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowRegister(false)}>Cerrar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Replacement selection modal */}
+      <Dialog open={showReplaceModal} onOpenChange={(o) => { if (!replaceSubmitting) setShowReplaceModal(o); }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Seleccionar reemplazo</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground -mt-1">
+            Elige quién te reemplazará. Si acepta, saldrás de la lista y esa persona entrará en tu lugar.
+          </p>
+          <div className="space-y-3">
+            <Input
+              placeholder="Buscar por nombre o mote..."
+              value={replaceSearch}
+              onChange={(e) => setReplaceSearch(e.target.value)}
+              autoFocus
+            />
+            <div className="max-h-64 overflow-y-auto divide-y rounded-lg border">
+              {replaceMembersLoading ? (
+                <p className="px-4 py-6 text-sm text-center text-muted-foreground">Cargando miembros...</p>
+              ) : replaceMembers.filter((m) => {
+                  const q = replaceSearch.toLowerCase();
+                  return !q || m.full_name?.toLowerCase().includes(q) || m.mote?.toLowerCase().includes(q);
+                }).length === 0 ? (
+                <p className="px-4 py-6 text-sm text-center text-muted-foreground">
+                  {replaceSearch ? 'Sin resultados' : 'No hay miembros disponibles'}
+                </p>
+              ) : (
+                replaceMembers
+                  .filter((m) => {
+                    const q = replaceSearch.toLowerCase();
+                    return !q || m.full_name?.toLowerCase().includes(q) || m.mote?.toLowerCase().includes(q);
+                  })
+                  .map((m) => (
+                    <button
+                      key={m.id}
+                      type="button"
+                      onClick={() => setSelectedReplacement(selectedReplacement?.id === m.id ? null : m)}
+                      className={`w-full flex items-center gap-3 px-4 py-3 text-left transition ${
+                        selectedReplacement?.id === m.id
+                          ? 'bg-primary/10 border-l-2 border-primary'
+                          : 'hover:bg-secondary/30'
+                      }`}
+                    >
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium">{m.full_name ?? '—'}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {m.mote ? `"${m.mote}" · ` : ''}{ROLE_LABELS[m.role] ?? m.role}
+                          {m.numero_roa ? ` · ROA #${m.numero_roa}` : ''}
+                        </p>
+                      </div>
+                      {selectedReplacement?.id === m.id && (
+                        <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4 text-primary shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M20 6 9 17l-5-5"/>
+                        </svg>
+                      )}
+                    </button>
+                  ))
+              )}
+            </div>
+          </div>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setShowReplaceModal(false)} disabled={replaceSubmitting}>
+              Cancelar
+            </Button>
+            <Button
+              onClick={handleRequestReplacement}
+              disabled={!selectedReplacement || replaceSubmitting}
+            >
+              {replaceSubmitting ? 'Enviando...' : 'Enviar solicitud'}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
