@@ -115,7 +115,7 @@ export function NotificationPanel({ userId }: { userId: string }) {
       {/* Panel */}
       <Sheet open={open} onOpenChange={setOpen}>
         <SheetContent side="right" className="w-full sm:w-100 p-0 flex flex-col">
-          <SheetHeader className="px-5 py-4 border-b shrink-0">
+          <SheetHeader className="px-5 py-4 border-b shrink-0 pr-12">
             <div className="flex items-center justify-between gap-3">
               <SheetTitle className="text-base">
                 Notificaciones
