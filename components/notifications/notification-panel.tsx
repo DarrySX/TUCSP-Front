@@ -16,19 +16,25 @@ interface Notification {
 }
 
 const TYPE_ICON: Record<string, string> = {
-  new_event:          '🎵',
-  rsvp_registered:    '✅',
-  attendance_present: '✓',
-  attendance_late:    '⚠',
-  attendance_absent:  '✗',
+  new_event:             '🎵',
+  rsvp_registered:       '✅',
+  attendance_present:    '✓',
+  attendance_late:       '⚠',
+  attendance_absent:     '✗',
+  replacement_requested: '🔄',
+  replacement_accepted:  '✅',
+  replacement_declined:  '❌',
 };
 
 const TYPE_COLOR: Record<string, string> = {
-  new_event:          'text-primary',
-  rsvp_registered:    'text-green-600',
-  attendance_present: 'text-green-600',
-  attendance_late:    'text-amber-500',
-  attendance_absent:  'text-red-600',
+  new_event:             'text-primary',
+  rsvp_registered:       'text-green-600',
+  attendance_present:    'text-green-600',
+  attendance_late:       'text-amber-500',
+  attendance_absent:     'text-red-600',
+  replacement_requested: 'text-blue-600',
+  replacement_accepted:  'text-green-600',
+  replacement_declined:  'text-red-600',
 };
 
 function timeAgo(dateStr: string) {
