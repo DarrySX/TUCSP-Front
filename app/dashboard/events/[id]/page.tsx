@@ -24,6 +24,7 @@ interface EventDetail {
   description: string | null;
   date: string;
   location: string | null;
+  location_url: string | null;
   event_type: string;
   status: string;
   created_at: string;
@@ -243,7 +244,7 @@ export default function EventDetailPage() {
 
   // Edit / delete state
   const [showEdit, setShowEdit]                   = useState(false);
-  const [editForm, setEditForm]                   = useState({ title: '', description: '', date: '', time: '', location: '', event_type: 'presentacion', status: 'upcoming' });
+  const [editForm, setEditForm]                   = useState({ title: '', description: '', date: '', time: '', location: '', location_url: '', event_type: 'presentacion', status: 'upcoming' });
   const [isEditing, setIsEditing]                 = useState(false);
   const [editError, setEditError]                 = useState<string | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -358,6 +359,7 @@ export default function EventDetailPage() {
       date: peruDateInput(event.date),
       time: peruTimeInput(event.date),
       location: event.location ?? '',
+      location_url: event.location_url ?? '',
       event_type: event.event_type,
       status: event.status,
     });
@@ -377,6 +379,7 @@ export default function EventDetailPage() {
         description: editForm.description || null,
         date: datetime,
         location: editForm.location || null,
+        location_url: editForm.location_url || null,
         event_type: editForm.event_type,
         status: editForm.status,
         updated_by: userId,
@@ -730,7 +733,28 @@ export default function EventDetailPage() {
               <h1 className="text-2xl sm:text-3xl font-bold mb-3">{event.title}</h1>
               <div className="space-y-1.5 text-sm text-muted-foreground">
                 <p>📅 {formatDateTime(event.date)}</p>
-                {event.location && <p>📍 {event.location}</p>}
+                {event.location && (
+                  <p className="flex items-center gap-1.5">
+                    <span>📍</span>
+                    {event.location_url ? (
+                      <a
+                        href={event.location_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-primary hover:underline inline-flex items-center gap-1"
+                      >
+                        {event.location}
+                        <svg xmlns="http://www.w3.org/2000/svg" className="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
+                          <polyline points="15 3 21 3 21 9"/>
+                          <line x1="10" y1="14" x2="21" y2="3"/>
+                        </svg>
+                      </a>
+                    ) : (
+                      event.location
+                    )}
+                  </p>
+                )}
                 {event.creator && (
                   <p>👤 Creado por <span className="font-medium text-foreground">
                     {event.creator.full_name}{event.creator.mote ? ` "${event.creator.mote}"` : ''}
@@ -1068,6 +1092,15 @@ export default function EventDetailPage() {
                 value={editForm.location}
                 onChange={(e) => setEditForm((p) => ({ ...p, location: e.target.value }))}
                 placeholder="Auditorio Principal"
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Link de Google Maps <span className="text-muted-foreground font-normal">(opcional)</span></label>
+              <Input
+                value={editForm.location_url}
+                onChange={(e) => setEditForm((p) => ({ ...p, location_url: e.target.value }))}
+                placeholder="https://maps.google.com/..."
+                type="url"
               />
             </div>
             <div className="space-y-2">
