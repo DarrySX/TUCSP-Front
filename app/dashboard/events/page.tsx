@@ -531,7 +531,7 @@ export default function EventsPage() {
                 value={editForm.location_url}
                 onChange={(e) => setEditForm((p) => ({ ...p, location_url: e.target.value }))}
                 placeholder="https://maps.google.com/..."
-                type="url"
+                type="text"
               />
             </div>
             <div className="space-y-2">
@@ -643,7 +643,7 @@ export default function EventsPage() {
                 value={newEvent.location_url}
                 onChange={(e) => setNewEvent((p) => ({ ...p, location_url: e.target.value }))}
                 placeholder="https://maps.google.com/..."
-                type="url"
+                type="text"
               />
             </div>
             <div className="space-y-2">
