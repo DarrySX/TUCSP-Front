@@ -23,6 +23,7 @@ interface EventRow {
   description: string | null;
   date: string;
   location: string | null;
+  location_url: string | null;
   event_type: string;
   status: string;
   created_at: string;
@@ -108,7 +109,7 @@ export default function EventsPage() {
   const [isCreating, setIsCreating] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
   const [editingEvent, setEditingEvent] = useState<EventRow | null>(null);
-  const [editForm, setEditForm] = useState({ title: '', description: '', date: '', time: '', location: '', event_type: 'presentacion', status: 'upcoming' });
+  const [editForm, setEditForm] = useState({ title: '', description: '', date: '', time: '', location: '', location_url: '', event_type: 'presentacion', status: 'upcoming' });
   const [isEditing, setIsEditing] = useState(false);
   const [editError, setEditError] = useState<string | null>(null);
   const [deletingEventId, setDeletingEventId] = useState<string | null>(null);
@@ -120,6 +121,7 @@ export default function EventsPage() {
     date: '',
     time: '',
     location: '',
+    location_url: '',
     event_type: 'presentacion',
   });
 
@@ -195,13 +197,14 @@ export default function EventsPage() {
         description: newEvent.description || null,
         date: datetime,
         location: newEvent.location || null,
+        location_url: newEvent.location_url || null,
         event_type: newEvent.event_type,
         created_by: userId,
         updated_by: userId,
       });
       if (error) throw error;
       setShowCreate(false);
-      setNewEvent({ title: '', description: '', date: '', time: '', location: '', event_type: 'presentacion' });
+      setNewEvent({ title: '', description: '', date: '', time: '', location: '', location_url: '', event_type: 'presentacion' });
       await loadAll();
     } catch (err) {
       setCreateError(err instanceof Error ? err.message : 'Error al crear el evento');
@@ -219,6 +222,7 @@ export default function EventsPage() {
       date: peruDateInput(ev.date),
       time: peruTimeInput(ev.date),
       location: ev.location ?? '',
+      location_url: ev.location_url ?? '',
       event_type: ev.event_type,
       status: ev.status,
     });
@@ -238,6 +242,7 @@ export default function EventsPage() {
         description: editForm.description || null,
         date: datetime,
         location: editForm.location || null,
+        location_url: editForm.location_url || null,
         event_type: editForm.event_type,
         status: editForm.status,
         updated_by: userId,
@@ -356,7 +361,29 @@ export default function EventsPage() {
                   <div className="space-y-1.5 text-sm text-muted-foreground mb-3 flex-1">
                     <p>📅 {formatEventDate(event.date)}</p>
                     <p>🕐 {formatEventTime(event.date)}</p>
-                    {event.location && <p>📍 {event.location}</p>}
+                    {event.location && (
+                      <p className="flex items-center gap-1.5">
+                        <span>📍</span>
+                        {event.location_url ? (
+                          <a
+                            href={event.location_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            onClick={(e) => e.stopPropagation()}
+                            className="text-primary hover:underline inline-flex items-center gap-1"
+                          >
+                            {event.location}
+                            <svg xmlns="http://www.w3.org/2000/svg" className="w-3 h-3 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                              <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
+                              <polyline points="15 3 21 3 21 9"/>
+                              <line x1="10" y1="14" x2="21" y2="3"/>
+                            </svg>
+                          </a>
+                        ) : (
+                          event.location
+                        )}
+                      </p>
+                    )}
                     <p>👥 {rsvpCount} confirmado{rsvpCount !== 1 ? 's' : ''}</p>
                   </div>
 
@@ -499,6 +526,15 @@ export default function EventsPage() {
               />
             </div>
             <div className="space-y-2">
+              <label className="text-sm font-medium">Link de Google Maps <span className="text-muted-foreground font-normal">(opcional)</span></label>
+              <Input
+                value={editForm.location_url}
+                onChange={(e) => setEditForm((p) => ({ ...p, location_url: e.target.value }))}
+                placeholder="https://maps.google.com/..."
+                type="url"
+              />
+            </div>
+            <div className="space-y-2">
               <label className="text-sm font-medium">Descripción</label>
               <Textarea
                 value={editForm.description}
@@ -599,6 +635,15 @@ export default function EventsPage() {
                 value={newEvent.location}
                 onChange={(e) => setNewEvent((p) => ({ ...p, location: e.target.value }))}
                 placeholder="Auditorio Principal"
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Link de Google Maps <span className="text-muted-foreground font-normal">(opcional)</span></label>
+              <Input
+                value={newEvent.location_url}
+                onChange={(e) => setNewEvent((p) => ({ ...p, location_url: e.target.value }))}
+                placeholder="https://maps.google.com/..."
+                type="url"
               />
             </div>
             <div className="space-y-2">
