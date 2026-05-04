@@ -192,16 +192,22 @@ export default function EventsPage() {
     setCreateError(null);
     try {
       const datetime = `${newEvent.date}T${newEvent.time || '00:00'}:00-05:00`;
-      const { error } = await supabase.from('events').insert({
+      const base = {
         title: newEvent.title,
         description: newEvent.description || null,
         date: datetime,
         location: newEvent.location || null,
-        location_url: newEvent.location_url || null,
         event_type: newEvent.event_type,
         created_by: userId,
         updated_by: userId,
+      };
+      let { error } = await supabase.from('events').insert({
+        ...base,
+        location_url: newEvent.location_url || null,
       });
+      if (error?.code === 'PGRST204') {
+        ({ error } = await supabase.from('events').insert(base));
+      }
       if (error) throw error;
       setShowCreate(false);
       setNewEvent({ title: '', description: '', date: '', time: '', location: '', location_url: '', event_type: 'presentacion' });
@@ -237,16 +243,23 @@ export default function EventsPage() {
     setEditError(null);
     try {
       const datetime = `${editForm.date}T${editForm.time || '00:00'}:00-05:00`;
-      const { error } = await supabase.from('events').update({
+      const base = {
         title: editForm.title,
         description: editForm.description || null,
         date: datetime,
         location: editForm.location || null,
-        location_url: editForm.location_url || null,
         event_type: editForm.event_type,
         status: editForm.status,
         updated_by: userId,
+      };
+      let { error } = await supabase.from('events').update({
+        ...base,
+        location_url: editForm.location_url || null,
       }).eq('id', editingEvent.id);
+      // Fallback: if column doesn't exist yet, save without it
+      if (error?.code === 'PGRST204') {
+        ({ error } = await supabase.from('events').update(base).eq('id', editingEvent.id));
+      }
       if (error) throw error;
       setEditingEvent(null);
       await loadAll();
