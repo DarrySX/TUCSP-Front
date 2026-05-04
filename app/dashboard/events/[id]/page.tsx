@@ -374,16 +374,22 @@ export default function EventDetailPage() {
     setEditError(null);
     try {
       const datetime = `${editForm.date}T${editForm.time || '00:00'}:00-05:00`;
-      const { error: err } = await supabase.from('events').update({
+      const base = {
         title: editForm.title,
         description: editForm.description || null,
         date: datetime,
         location: editForm.location || null,
-        location_url: editForm.location_url || null,
         event_type: editForm.event_type,
         status: editForm.status,
         updated_by: userId,
+      };
+      let { error: err } = await supabase.from('events').update({
+        ...base,
+        location_url: editForm.location_url || null,
       }).eq('id', eventId);
+      if (err?.code === 'PGRST204') {
+        ({ error: err } = await supabase.from('events').update(base).eq('id', eventId));
+      }
       if (err) throw err;
       setShowEdit(false);
       await loadAll();
