@@ -20,6 +20,7 @@ interface UpcomingEvent {
   title: string;
   date: string;
   location: string | null;
+  location_url: string | null;
   event_type: string;
   rsvp_count: number;
   has_rsvp: boolean;
@@ -88,7 +89,7 @@ export default function UserDashboard() {
       const myRsvpIds = new Set(myRsvps?.map((r) => r.event_id) ?? []);
       const { data: upcomingData } = await supabase
         .from('events')
-        .select('id, title, date, location, event_type, event_rsvps(count)')
+        .select('id, title, date, location, location_url, event_type, event_rsvps(count)')
         .eq('status', 'upcoming')
         .order('date')
         .limit(4);
@@ -99,6 +100,7 @@ export default function UserDashboard() {
           title: e.title,
           date: e.date,
           location: e.location,
+          location_url: e.location_url ?? null,
           event_type: e.event_type,
           rsvp_count: (e.event_rsvps as { count: number }[])[0]?.count ?? 0,
           has_rsvp: myRsvpIds.has(e.id),
@@ -201,7 +203,29 @@ export default function UserDashboard() {
                         {' · '}
                         🕐 {new Date(event.date).toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Lima' })}
                       </p>
-                      {event.location && <p className="text-sm text-muted-foreground">📍 {event.location}</p>}
+                      {event.location && (
+                        <p className="text-sm text-muted-foreground flex items-center gap-1">
+                          <span>📍</span>
+                          {event.location_url ? (
+                            <a
+                              href={event.location_url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              onClick={(e) => e.stopPropagation()}
+                              className="text-primary hover:underline inline-flex items-center gap-1"
+                            >
+                              {event.location}
+                              <svg xmlns="http://www.w3.org/2000/svg" className="w-3 h-3 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
+                                <polyline points="15 3 21 3 21 9"/>
+                                <line x1="10" y1="14" x2="21" y2="3"/>
+                              </svg>
+                            </a>
+                          ) : (
+                            event.location
+                          )}
+                        </p>
+                      )}
                       <p className="text-sm text-muted-foreground">👥 {event.rsvp_count} confirmados</p>
                     </div>
                     <div className="flex items-center gap-2 pt-2 border-t">
