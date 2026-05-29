@@ -415,7 +415,7 @@ export default function EventsPage() {
                       ) : null
                     )}
                     <div className="flex items-center gap-1.5 ml-auto">
-                      {isUpcoming && hasRsvp && !isAdmin ? (
+                      {isUpcoming && hasRsvp ? (
                         <Button
                           size="sm"
                           variant="outline"
@@ -427,14 +427,11 @@ export default function EventsPage() {
                       ) : isUpcoming ? (
                         <Button
                           size="sm"
-                          variant={hasRsvp ? 'outline' : 'default'}
+                          variant="default"
                           disabled={rsvpLoading === event.id}
                           onClick={() => handleRsvp(event.id)}
-                          className={hasRsvp ? 'text-destructive border-destructive hover:bg-destructive/10' : ''}
                         >
-                          {rsvpLoading === event.id
-                            ? '...'
-                            : hasRsvp ? 'Cancelar' : 'Confirmar'}
+                          {rsvpLoading === event.id ? '...' : 'Confirmar'}
                         </Button>
                       ) : null}
                       <Button size="sm" variant="outline" asChild>
