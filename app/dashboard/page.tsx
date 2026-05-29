@@ -40,7 +40,6 @@ export default function UserDashboard() {
   const [upcoming, setUpcoming] = useState<UpcomingEvent[]>([]);
   const [userId, setUserId] = useState<string | null>(null);
   const [userName, setUserName] = useState<string | null>(null);
-  const [isAdmin, setIsAdmin] = useState(false);
   const [rsvpLoading, setRsvpLoading] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -68,7 +67,6 @@ export default function UserDashboard() {
       ]);
 
       setUserName(profile?.mote ? `"${profile.mote}"` : profile?.full_name ?? null);
-      setIsAdmin(profile?.role === 'super_admin' || profile?.role === 'tuno_admin');
 
       const events = allEvents ?? [];
       const completed = events.filter((e) => e.status === 'completed');
@@ -237,7 +235,7 @@ export default function UserDashboard() {
                         </span>
                       )}
                       <div className="flex gap-2 ml-auto">
-                        {event.has_rsvp && !isAdmin ? (
+                        {event.has_rsvp ? (
                           <Button
                             size="sm"
                             variant="outline"
@@ -249,12 +247,11 @@ export default function UserDashboard() {
                         ) : (
                           <Button
                             size="sm"
-                            variant={event.has_rsvp ? 'outline' : 'default'}
+                            variant="default"
                             disabled={rsvpLoading === event.id}
                             onClick={() => handleRsvp(event.id, event.has_rsvp)}
-                            className={event.has_rsvp ? 'text-destructive border-destructive hover:bg-destructive/10' : ''}
                           >
-                            {rsvpLoading === event.id ? '...' : event.has_rsvp ? 'Cancelar' : 'Confirmar'}
+                            {rsvpLoading === event.id ? '...' : 'Confirmar'}
                           </Button>
                         )}
                         <Button size="sm" variant="ghost" asChild>
