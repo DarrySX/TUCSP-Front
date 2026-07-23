@@ -50,3 +50,6 @@ Thumbs.db
 #agents
 .agents
 .agent
+
+# MCP (contiene tokens - solo .mcp.json.example se versiona)
+.mcp.json
