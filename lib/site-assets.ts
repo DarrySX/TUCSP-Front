@@ -22,28 +22,28 @@ export const galleryImages: GalleryImage[] = [
   {
     src: '/TUCSP1.jpg',
     alt: 'La Tuna Universitaria UCSP interpretando en un escenario iluminado',
-    caption: 'En escena',
+    caption: 'Viajes',
     wide: true,
   },
   {
     src: '/Esce1.jpg',
     alt: 'Integrantes de la tuna tocando bandurria durante una presentación',
-    caption: 'Cuerdas',
+    caption: 'Certámenes',
   },
   {
     src: '/Grupal2.jpg',
     alt: 'Fotografía grupal de los integrantes de la Tuna UCSP con sus capas',
-    caption: 'La rondalla',
+    caption: 'Presentaciones',
   },
   {
     src: '/Esce2.jpg',
     alt: 'Presentación de la tuna ante el público universitario',
-    caption: 'Público',
+    caption: 'Certámenes',
   },
   {
     src: '/TUCSP2.jpg',
     alt: 'Integrantes de la tuna durante una serenata nocturna',
-    caption: 'Serenata',
+    caption: 'Serenatas',
   },
   {
     src: '/Esce3.jpg',
@@ -53,13 +53,13 @@ export const galleryImages: GalleryImage[] = [
   {
     src: '/TUCSP3.jpg',
     alt: 'Detalle de los instrumentos y el traje tradicional de la tuna',
-    caption: 'Tradición',
+    caption: 'Premios',
     wide: true,
   },
   {
     src: '/Esce4.jpg',
     alt: 'Cierre de una presentación de la Tuna UCSP',
-    caption: 'Gran final',
+    caption: 'Pasacalles',
   },
 ];
 
