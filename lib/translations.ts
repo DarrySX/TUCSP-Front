@@ -10,7 +10,7 @@ export const translations = {
       dashboard: 'My Panel',
     },
     hero: {
-      eyebrow: 'Live music since 2010',
+      eyebrow: 'Playing with you since 2009',
       title: 'Tradition that sounds',
       titleAccent: 'alive.',
       subtitle:
@@ -204,7 +204,7 @@ export const translations = {
       dashboard: 'Mi Panel',
     },
     hero: {
-      eyebrow: 'Música en vivo desde 2010',
+      eyebrow: 'Conquistando corazones desde 2009',
       title: 'Tradición que suena',
       titleAccent: 'viva.',
       subtitle:
