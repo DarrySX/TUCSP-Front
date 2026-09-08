@@ -75,8 +75,8 @@
 }
 
 @theme inline {
-  --font-sans: 'Geist', 'Geist Fallback';
-  --font-mono: 'Geist Mono', 'Geist Mono Fallback';
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -121,5 +121,257 @@
   }
   body {
     @apply bg-background text-foreground;
+  }
+  html {
+    scroll-behavior: smooth;
+  }
+  /* The preloader owns the viewport until it hands off; prevents a scrollbar
+     flash while the curtain is still covering the page. */
+  body[data-loading='true'] {
+    overflow: hidden;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   Motion system
+   Every animation below is opt-in via a utility class and is disabled wholesale
+   by the prefers-reduced-motion block at the end of this file.
+   --------------------------------------------------------------------------- */
+
+@theme inline {
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in-out-quint: cubic-bezier(0.83, 0, 0.17, 1);
+}
+
+@keyframes tu-fade-up {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 24px, 0);
+    filter: blur(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+    filter: blur(0);
+  }
+}
+
+@keyframes tu-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes tu-scale-in {
+  from {
+    opacity: 0;
+    transform: scale(0.94);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Slow push-in used behind hero/gallery imagery for a cinematic feel. */
+@keyframes tu-ken-burns {
+  from {
+    transform: scale(1) translate3d(0, 0, 0);
+  }
+  to {
+    transform: scale(1.12) translate3d(0, -1.5%, 0);
+  }
+}
+
+@keyframes tu-marquee {
+  from {
+    transform: translate3d(0, 0, 0);
+  }
+  to {
+    transform: translate3d(-50%, 0, 0);
+  }
+}
+
+@keyframes tu-shimmer {
+  from {
+    background-position: 200% 0;
+  }
+  to {
+    background-position: -200% 0;
+  }
+}
+
+@keyframes tu-pulse-ring {
+  0% {
+    opacity: 0.7;
+    transform: scale(0.9);
+  }
+  70% {
+    opacity: 0;
+    transform: scale(1.6);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.6);
+  }
+}
+
+@keyframes tu-float {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0);
+  }
+  50% {
+    transform: translate3d(0, -10px, 0);
+  }
+}
+
+@keyframes tu-scroll-hint {
+  0% {
+    opacity: 0;
+    transform: translate3d(0, -6px, 0);
+  }
+  40% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translate3d(0, 10px, 0);
+  }
+}
+
+@keyframes tu-aurora {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  33% {
+    transform: translate3d(4%, -3%, 0) scale(1.08);
+  }
+  66% {
+    transform: translate3d(-3%, 4%, 0) scale(0.96);
+  }
+}
+
+@utility animate-ken-burns {
+  animation: tu-ken-burns 18s var(--ease-out-expo) forwards;
+}
+
+@utility animate-marquee {
+  animation: tu-marquee 36s linear infinite;
+}
+
+@utility animate-float {
+  animation: tu-float 6s ease-in-out infinite;
+}
+
+@utility animate-aurora {
+  animation: tu-aurora 22s ease-in-out infinite;
+}
+
+@utility animate-scroll-hint {
+  animation: tu-scroll-hint 2s ease-in-out infinite;
+}
+
+@utility animate-pulse-ring {
+  animation: tu-pulse-ring 2.4s var(--ease-out-expo) infinite;
+}
+
+/* Text that sweeps a highlight across itself — used for the preloader wordmark. */
+@utility text-shimmer {
+  background: linear-gradient(
+    90deg,
+    var(--muted-foreground) 0%,
+    var(--muted-foreground) 40%,
+    var(--foreground) 50%,
+    var(--muted-foreground) 60%,
+    var(--muted-foreground) 100%
+  );
+  background-size: 200% auto;
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+  animation: tu-shimmer 3s linear infinite;
+}
+
+/*
+ * Scroll reveal. Elements start hidden and are promoted to visible by the
+ * Reveal component once they intersect the viewport. Declaring the hidden state
+ * in CSS (rather than in React state) means there is no flash of positioned
+ * content before hydration.
+ */
+@utility reveal {
+  opacity: 0;
+  will-change: opacity, transform;
+}
+
+.reveal[data-revealed='true'] {
+  animation: tu-fade-up 0.9s var(--ease-out-expo) forwards;
+  animation-delay: var(--reveal-delay, 0ms);
+}
+
+.reveal[data-variant='fade'][data-revealed='true'] {
+  animation-name: tu-fade-in;
+}
+
+.reveal[data-variant='scale'][data-revealed='true'] {
+  animation-name: tu-scale-in;
+}
+
+/*
+ * Entrance animations for above-the-fold content.
+ *
+ * These would otherwise play out entirely behind the preloader curtain. Pausing
+ * on `body[data-loading]` — which the preloader owns — means the hero animates
+ * exactly when the visitor first sees it, with no JS coupling between the two
+ * components. Scoped to `[data-enter]` so the preloader's own animations, which
+ * live outside this selector, keep running.
+ */
+@utility animate-enter {
+  opacity: 0;
+  animation: tu-fade-up 1s var(--ease-out-expo) forwards;
+  animation-delay: var(--enter-delay, 0ms);
+}
+
+body[data-loading='true'] [data-enter] {
+  animation-play-state: paused;
+}
+
+/* Fine grid backdrop that reads as "technical" without competing with content. */
+@utility bg-grid {
+  background-image:
+    linear-gradient(to right, color-mix(in oklab, var(--foreground) 7%, transparent) 1px, transparent 1px),
+    linear-gradient(to bottom, color-mix(in oklab, var(--foreground) 7%, transparent) 1px, transparent 1px);
+  background-size: 64px 64px;
+}
+
+/* Subtle film grain, layered over hero imagery. */
+@utility bg-noise {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)' opacity='0.32'/%3E%3C/svg%3E");
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  .reveal,
+  .reveal[data-revealed='true'],
+  .animate-enter {
+    opacity: 1;
+    animation: none !important;
+    transform: none !important;
+    filter: none !important;
+  }
+  .animate-ken-burns,
+  .animate-marquee,
+  .animate-float,
+  .animate-aurora,
+  .animate-scroll-hint,
+  .animate-pulse-ring,
+  .text-shimmer {
+    animation: none !important;
   }
 }
