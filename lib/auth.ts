@@ -1,24 +1,7 @@
-import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import { supabase } from '@/lib/supabase-client';
 
-let _instance: SupabaseClient | undefined;
-
-function getInstance(): SupabaseClient {
-  if (!_instance) {
-    _instance = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-    );
-  }
-  return _instance;
-}
-
-export const supabase = new Proxy({} as SupabaseClient, {
-  get(_target, prop) {
-    const instance = getInstance();
-    const value = instance[prop as keyof SupabaseClient];
-    return typeof value === 'function' ? (value as Function).bind(instance) : value;
-  },
-});
+// Re-exported so existing `import { supabase } from '@/lib/auth'` call sites keep working.
+export { supabase };
 
 export async function signUp(email: string, password: string, fullName: string) {
   const { data, error } = await supabase.auth.signUp({
