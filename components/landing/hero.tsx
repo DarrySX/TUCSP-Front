@@ -26,6 +26,7 @@ export function Hero() {
       const offset = Math.min(window.scrollY, window.innerHeight) * 0.35;
       node.style.transform = `translate3d(0, ${offset}px, 0)`;
     };
+    
     const onScroll = () => {
       if (!frame) frame = requestAnimationFrame(update);
     };
